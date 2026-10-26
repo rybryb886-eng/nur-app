@@ -31,7 +31,8 @@ shot surah-playing 15
 open_link "nur:///sermons"
 shot sermons 10
 adb shell input tap 160 280
-shot sermon-playing 15
+shot sermon-playing 20
+shot sermon-playing-later 20
 open_link "nur:///learn/prayer"
 shot learn 5
 

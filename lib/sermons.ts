@@ -39,7 +39,10 @@ async function fetchChannel(channel: SermonChannel): Promise<Sermon[]> {
       'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36',
     },
   });
-  if (!res.ok) throw new Error(String(res.status));
+  if (!res.ok) {
+    console.warn(`Sermon feed ${channel.id}: HTTP ${res.status}`);
+    throw new Error(String(res.status));
+  }
   const xml = await res.text();
   const out: Sermon[] = [];
   for (const entry of xml.split('<entry>').slice(1)) {
@@ -65,6 +68,9 @@ export function useSermons() {
     setLoading(true);
     const results = await Promise.allSettled(CHANNELS.map(fetchChannel));
     const fresh = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+    results.forEach(
+      (r, i) => r.status === 'rejected' && console.warn(`Sermon feed ${CHANNELS[i].id} failed: ${r.reason}`),
+    );
     if (fresh.length) {
       // Keep a channel's older snapshot when only its feed failed.
       const failed = new Set(CHANNELS.filter((_, i) => results[i].status === 'rejected').map((c) => c.id));

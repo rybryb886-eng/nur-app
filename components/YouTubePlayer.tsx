@@ -4,25 +4,34 @@ import { WebView } from 'react-native-webview';
 
 const ORIGIN = 'https://kz.nurapp.app';
 
-function html(videoId: string) {
-  return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;top:0;left:0;width:100%;height:100%}</style>
-</head><body><div id="p"></div>
-<script>
-function send(m){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m))}
-function onYouTubeIframeAPIReady(){
-  new YT.Player('p',{videoId:'${videoId}',
-    playerVars:{autoplay:1,playsinline:1,rel:0,modestbranding:1,origin:'${ORIGIN}'},
-    events:{
-      onReady:function(e){e.target.playVideo()},
-      onStateChange:function(e){send({state:e.data})},
-      onError:function(e){send({error:e.data})}
-    }});
+// YouTube refuses embeds that arrive without a Referer (player errors 152/153), which is what a
+// WebView loading inline HTML sends, so the embed page is opened directly with one.
+function embedUrl(videoId: string) {
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(ORIGIN)}`;
 }
-</script>
-<script src="https://www.youtube.com/iframe_api"></script>
-</body></html>`;
-}
+
+// Runs inside the embed page: reports the end of the video and playback errors.
+const WATCH = `
+(function () {
+  function send(m) { window.ReactNativeWebView.postMessage(JSON.stringify(m)); }
+  var hooked = null;
+  var reported = false;
+  setInterval(function () {
+    var v = document.querySelector('video');
+    if (v && v !== hooked) {
+      hooked = v;
+      v.addEventListener('ended', function () { send({ state: 0 }); });
+      v.play && v.play().catch(function () {});
+    }
+    var err = document.querySelector('.ytp-error');
+    if (err && err.offsetParent !== null && !reported) {
+      reported = true;
+      send({ error: (err.textContent || 'page').slice(0, 80) });
+    }
+  }, 1000);
+})();
+true;
+`;
 
 /**
  * Embedded YouTube player. Reports when the video ends (to move on to the next one in the
@@ -35,7 +44,7 @@ export function YouTubePlayer({
 }: {
   videoId: string;
   onEnded: () => void;
-  onError: (code: number) => void;
+  onError: (code: number | string) => void;
 }) {
   if (Platform.OS === 'web') {
     return (
@@ -52,7 +61,8 @@ export function YouTubePlayer({
     <View style={styles.frame}>
       <WebView
         key={videoId}
-        source={{ html: html(videoId), baseUrl: ORIGIN }}
+        source={{ uri: embedUrl(videoId), headers: { Referer: `${ORIGIN}/` } }}
+        injectedJavaScript={WATCH}
         style={{ backgroundColor: '#000' }}
         javaScriptEnabled
         allowsInlineMediaPlayback
@@ -62,7 +72,10 @@ export function YouTubePlayer({
           try {
             const m = JSON.parse(e.nativeEvent.data);
             if (m.state === 0) onEnded();
-            if (m.error !== undefined) onError(m.error);
+            if (m.error !== undefined) {
+              console.warn(`YouTube player error ${m.error} for ${videoId}`);
+              onError(m.error);
+            }
           } catch {}
         }}
       />
