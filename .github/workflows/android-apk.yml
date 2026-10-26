@@ -95,11 +95,17 @@ jobs:
           disable-animations: true
           script: bash scripts/smoke-test.sh nur-${{ github.ref_name }}.apk
 
-      - uses: actions/upload-artifact@v4
+      # Screenshots of the main screens, viewable at the smoke-<branch> release.
+      - name: Publish screenshots
         if: always()
-        with:
-          name: emulator-screen
-          path: screen.png
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=smoke-${{ github.ref_name }}
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --target "${{ github.sha }}" \
+              --title "Smoke test screenshots (${{ github.ref_name }})" --notes "Screens of the latest build on an Android emulator."
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" screen.png shots/*.png --clobber || true
 
       # Only an APK that starts on the emulator is published.
       - name: Publish to the preview release

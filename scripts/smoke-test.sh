@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Installs the APK on the running emulator, opens the main screens and prints each screenshot to the
-# log as base64 between "=== SHOT name" and "=== END name". Fails if the app is not running at the end.
+# shots/NN-name.png. Fails if the app is not running at the end.
 set -u
 APK="$1"
 PKG=kz.nurapp.app
 
+mkdir -p shots
+N=0
 shot() {
   sleep "$2"
-  echo "=== SHOT $1"
-  adb exec-out screencap -p | base64 -w 0
-  echo
-  echo "=== END $1"
+  N=$((N + 1))
+  adb exec-out screencap -p > "shots/$(printf %02d $N)-$1.png"
 }
 open_link() { adb shell am start -W -a android.intent.action.VIEW -d "$1" "$PKG" >/dev/null; }
 
