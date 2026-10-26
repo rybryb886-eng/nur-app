@@ -87,6 +87,14 @@
             }
           ]
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "# WorkManager (used by the home screen widget) creates its Room database by reflection;\n# R8 renaming it crashes the app at startup.\n-keep class androidx.work.** { *; }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-keep class androidx.room.** { *; }"
+          }
+        }
       ]
     ],
     "experiments": {
