@@ -1,65 +1,39 @@
-import { ReactNode, useMemo } from "react";
-import {
-  Pressable,
-  StyleProp,
-  StyleSheet,
-  Text,
-  TextProps,
-  TextStyle,
-  View,
-  ViewStyle,
-} from "react-native";
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ReactNode, useMemo } from 'react';
+import { Pressable, StyleProp, StyleSheet, Text, TextProps, TextStyle, View, ViewStyle } from 'react-native';
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SkyScene } from "./SkyScene";
+import { SkyScene } from './SkyScene';
 
-import { computeTimes } from "@/lib/prayer";
-import { useSettings } from "@/lib/settings";
-import { GLASS, SKY, skyPhase, SkyPhase } from "@/lib/sky";
-import { useNow } from "@/lib/useNow";
+import { computeTimes } from '@/lib/prayer';
+import { useSettings } from '@/lib/settings';
+import { GLASS, SKY, skyPhase, SkyPhase } from '@/lib/sky';
+import { useNow } from '@/lib/useNow';
 
 export const FONT = {
-  regular: "Inter_400Regular",
-  medium: "Inter_500Medium",
-  semibold: "Inter_600SemiBold",
-  bold: "Inter_700Bold",
-  arabic: "AmiriQuran_400Regular",
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  arabic: 'AmiriQuran_400Regular',
 };
 
 export function useSkyPhase(): SkyPhase {
   const { settings } = useSettings();
   const now = useNow(60_000);
   return useMemo(
-    () =>
-      skyPhase(
-        computeTimes(settings.place, settings.method, settings.hanafi, now),
-        now,
-      ),
+    () => skyPhase(computeTimes(settings.place, settings.method, settings.hanafi, now), now),
     [settings.place, settings.method, settings.hanafi, now],
   );
 }
 
-export function Sky({
-  children,
-  padTop = true,
-}: {
-  children: ReactNode;
-  padTop?: boolean;
-}) {
+export function Sky({ children, padTop = true }: { children: ReactNode; padTop?: boolean }) {
   const phase = useSkyPhase();
   const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: SKY[phase].colors[0] }}>
       <SkyScene phase={phase} />
-      <View style={{ flex: 1, paddingTop: padTop ? insets.top : 0 }}>
-        {children}
-      </View>
+      <View style={{ flex: 1, paddingTop: padTop ? insets.top : 0 }}>{children}</View>
     </View>
   );
 }
@@ -78,11 +52,7 @@ export function Glass({
   /** Index in a list: the card slides in, staggered by this. */
   enter?: number;
 }) {
-  const base = [
-    styles.glass,
-    strong && { backgroundColor: GLASS.bgStrong },
-    style,
-  ];
+  const base = [styles.glass, strong && { backgroundColor: GLASS.bgStrong }, style];
   const entering =
     enter === undefined
       ? undefined
@@ -126,13 +96,8 @@ export function PressScale({
     <Pressable
       onPress={onPress}
       hitSlop={hitSlop}
-      onPressIn={() =>
-        (scale.value = withSpring(0.96, { damping: 15, stiffness: 300 }))
-      }
-      onPressOut={() =>
-        (scale.value = withSpring(1, { damping: 12, stiffness: 200 }))
-      }
-    >
+      onPressIn={() => (scale.value = withSpring(0.96, { damping: 15, stiffness: 300 }))}
+      onPressOut={() => (scale.value = withSpring(1, { damping: 12, stiffness: 200 }))}>
       <Animated.View style={[style, animated]}>{children}</Animated.View>
     </Pressable>
   );
@@ -146,14 +111,7 @@ type TxtProps = TextProps & {
   style?: StyleProp<TextStyle>;
 };
 
-export function Txt({
-  size = 15,
-  weight = "regular",
-  dim,
-  faint,
-  style,
-  ...rest
-}: TxtProps) {
+export function Txt({ size = 15, weight = 'regular', dim, faint, style, ...rest }: TxtProps) {
   return (
     <Text
       {...rest}
@@ -169,41 +127,19 @@ export function Txt({
   );
 }
 
-export function Chip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active?: boolean;
-  onPress: () => void;
-}) {
+export function Chip({ label, active, onPress }: { label: string; active?: boolean; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[
-        styles.chip,
-        active && { backgroundColor: "rgba(255,255,255,0.9)" },
-      ]}
-    >
-      <Txt
-        size={14}
-        weight="medium"
-        style={active ? { color: "#1D2A63" } : undefined}
-      >
+      style={[styles.chip, active && { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+      <Txt size={14} weight="medium" style={active ? { color: '#1D2A63' } : undefined}>
         {label}
       </Txt>
     </Pressable>
   );
 }
 
-export function ScreenTitle({
-  children,
-  right,
-}: {
-  children: ReactNode;
-  right?: ReactNode;
-}) {
+export function ScreenTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <View style={styles.titleRow}>
       <Txt size={28} weight="bold" style={{ flex: 1 }}>
@@ -231,8 +167,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,

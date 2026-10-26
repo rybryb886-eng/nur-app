@@ -1,15 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FONT, Glass, Sky, Txt } from '@/components/ui';
 import { useT } from '@/lib/i18n';
-import { ayahAudioUrl, BASMALA, getSurah, SURAHS } from '@/lib/quran';
+import { BASMALA, getSurah, SURAHS } from '@/lib/quran';
+import { arabicWordIndex, loadTimings, locate, Position, wordCount } from '@/lib/recitation';
 import { useSettings } from '@/lib/settings';
 import { GLASS } from '@/lib/sky';
+
+const HIGHLIGHT = '#FFE6B0';
+
+function formatClock(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 export default function SurahScreen() {
   const t = useT();
@@ -18,45 +26,73 @@ export default function SurahScreen() {
   const n = Number(params.n);
   const meta = SURAHS[n - 1];
   const text = useMemo(() => getSurah(n), [n]);
+  const timings = useMemo(() => loadTimings(n), [n]);
   const { settings, update } = useSettings();
 
   const translit =
     settings.translitScript === 'lat' ? text.lat : settings.lang === 'ru' ? text.cyrRu : text.cyrKk;
   const translation = settings.quranTranslation === 'ru' ? text.ru : text.kk;
 
-  const player = useAudioPlayer();
+  // The whole surah is one recording; word timings tell which ayah and word is being recited.
+  const player = useAudioPlayer(null, { updateInterval: 120 });
   const status = useAudioPlayerStatus(player);
-  const [playing, setPlaying] = useState<number | null>(null); // ayah number
-  const [continuous, setContinuous] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const pendingSeek = useRef<number | null>(null);
   const listRef = useRef<FlatList<number>>(null);
+  const followRef = useRef(true);
 
   useEffect(() => {
-    setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true }).catch(() => {});
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+    }).catch(() => {});
   }, []);
 
-  const playAyah = useCallback(
+  const position: Position | null =
+    loaded && status.currentTime > 0 ? locate(timings, status.currentTime * 1000, text.ar) : null;
+  const currentAyah = position?.ayah ?? null;
+
+  const playFrom = useCallback(
     (ayah: number) => {
-      player.replace({ uri: ayahAudioUrl(n, ayah) });
+      const ms = timings.v[ayah - 1]?.[0] ?? 0;
+      if (!loaded) {
+        player.replace({ uri: timings.u });
+        setLoaded(true);
+        pendingSeek.current = ms;
+      } else {
+        player.seekTo(ms / 1000);
+      }
+      followRef.current = true;
       player.play();
-      setPlaying(ayah);
-      listRef.current?.scrollToIndex({ index: ayah - 1, animated: true, viewPosition: 0.1 });
     },
-    [n, player],
+    [loaded, player, timings],
   );
 
-  const stop = useCallback(() => {
-    player.pause();
-    setPlaying(null);
-    setContinuous(false);
-  }, [player]);
+  // A freshly loaded file can only seek once it has loaded.
+  useEffect(() => {
+    if (status.isLoaded && pendingSeek.current !== null) {
+      const ms = pendingSeek.current;
+      pendingSeek.current = null;
+      if (ms > 0) player.seekTo(ms / 1000);
+      player.play();
+    }
+  }, [status.isLoaded]);
+
+  // Follow the recitation down the list and remember the place.
+  useEffect(() => {
+    if (!currentAyah || !status.playing) return;
+    if (followRef.current) {
+      listRef.current?.scrollToIndex({
+        index: currentAyah - 1,
+        animated: true,
+        viewPosition: 0.15,
+      });
+    }
+    update({ lastRead: { surah: n, ayah: currentAyah } });
+  }, [currentAyah]);
 
   useEffect(() => {
-    if (!status.didJustFinish || playing === null) return;
-    if (continuous && playing < meta.ayahs) playAyah(playing + 1);
-    else {
-      setPlaying(null);
-      setContinuous(false);
-    }
+    if (status.didJustFinish) player.seekTo(0);
   }, [status.didJustFinish]);
 
   // Jump to a saved position once the list has laid out.
@@ -69,11 +105,18 @@ export default function SurahScreen() {
 
   const onViewable = useRef(({ viewableItems }: { viewableItems: { item: number }[] }) => {
     const first = viewableItems[0]?.item;
-    if (first) update({ lastRead: { surah: n, ayah: first } });
+    if (first && !player.playing) update({ lastRead: { surah: n, ayah: first } });
   }).current;
 
   const ayahNumbers = useMemo(() => Array.from({ length: meta.ayahs }, (_, i) => i + 1), [meta.ayahs]);
   const showBasmala = n !== 1 && n !== 9;
+  const playing = status.playing;
+
+  const togglePlay = () => {
+    if (playing) player.pause();
+    else if (loaded && status.currentTime > 0) player.play();
+    else playFrom(settings.lastRead?.surah === n ? settings.lastRead.ayah : 1);
+  };
 
   return (
     <Sky>
@@ -96,11 +139,21 @@ export default function SurahScreen() {
         ref={listRef}
         data={ayahNumbers}
         keyExtractor={(a) => String(a)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
+        extraData={position}
+        contentContainerStyle={{ padding: 16, paddingBottom: 160 }}
         onViewableItemsChanged={onViewable}
         viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
+        // Stop following the recitation while the reader scrolls on their own.
+        onScrollBeginDrag={() => (followRef.current = false)}
         onScrollToIndexFailed={(info) =>
-          setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: false }), 200)
+          setTimeout(
+            () =>
+              listRef.current?.scrollToIndex({
+                index: info.index,
+                animated: false,
+              }),
+            200,
+          )
         }
         ListHeaderComponent={
           <View style={{ alignItems: 'center', marginBottom: 16 }}>
@@ -112,58 +165,55 @@ export default function SurahScreen() {
           </View>
         }
         renderItem={({ item: ayah }) => {
-          const active = playing === ayah;
+          const active = currentAyah === ayah;
           return (
-            <Glass strong={active} style={[styles.ayah, active && { borderColor: '#FFE6B0' }]}>
-              <View style={styles.ayahHeader}>
-                <View style={styles.ayahNo}>
-                  <Txt size={12} weight="semibold">
-                    {n}:{ayah}
-                  </Txt>
-                </View>
-                <Pressable
-                  hitSlop={10}
-                  onPress={() => (active && status.playing ? stop() : playAyah(ayah))}>
-                  <Ionicons
-                    name={active && status.playing ? 'pause-circle' : 'play-circle-outline'}
-                    size={30}
-                    color="#fff"
-                  />
-                </Pressable>
-              </View>
-              <Txt style={styles.arabic}>{text.ar[ayah - 1]}</Txt>
-              <Txt size={16} weight="medium" style={styles.translit}>
-                {translit[ayah - 1]}
-              </Txt>
-              <Txt dim size={15} style={{ lineHeight: 22 }}>
-                {translation[ayah - 1]}
-              </Txt>
-            </Glass>
+            <Ayah
+              surah={n}
+              ayah={ayah}
+              arabic={text.ar[ayah - 1]}
+              translit={translit[ayah - 1]}
+              translation={translation[ayah - 1]}
+              words={wordCount(timings, ayah)}
+              position={active ? position : null}
+              playing={active && playing}
+              onPlay={() => (active && playing ? player.pause() : playFrom(ayah))}
+            />
           );
         }}
       />
 
       <View style={[styles.player, { paddingBottom: insets.bottom + 12 }]}>
         <Glass strong style={styles.playerInner}>
-          <Pressable
-            onPress={() => {
-              if (playing !== null && status.playing) stop();
-              else {
-                setContinuous(true);
-                const resume = settings.lastRead?.surah === n ? settings.lastRead.ayah : 1;
-                playAyah(playing ?? resume);
-              }
-            }}
-            style={styles.playBtn}>
-            <Ionicons name={playing !== null && status.playing ? 'pause' : 'play'} size={24} color="#1D2A63" />
+          <Pressable onPress={togglePlay} style={styles.playBtn}>
+            <Ionicons name={playing ? 'pause' : 'play'} size={24} color="#1D2A63" />
           </Pressable>
-          <View style={{ flex: 1 }}>
-            <Txt size={15} weight="semibold">
-              {playing !== null ? `${meta.name}, ${playing} ${t('ayah')}` : t('playAll')}
-            </Txt>
-            <Txt dim size={13}>
-              {status.isBuffering ? t('loading') : t('reciter')}
-            </Txt>
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Txt size={15} weight="semibold" numberOfLines={1} style={{ flex: 1 }}>
+                {currentAyah ? `${meta.name}, ${currentAyah} ${t('ayah')}` : t('playAll')}
+              </Txt>
+              {loaded && status.duration > 0 && (
+                <Txt dim size={12} style={{ fontVariant: ['tabular-nums'] }}>
+                  {formatClock(status.currentTime)} / {formatClock(status.duration)}
+                </Txt>
+              )}
+            </View>
+            {loaded && status.duration > 0 ? (
+              <View style={styles.track}>
+                <View
+                  style={[
+                    styles.trackFill,
+                    {
+                      width: `${(status.currentTime / status.duration) * 100}%`,
+                    },
+                  ]}
+                />
+              </View>
+            ) : (
+              <Txt dim size={13}>
+                {status.isBuffering ? t('loading') : t('reciter')}
+              </Txt>
+            )}
           </View>
         </Glass>
       </View>
@@ -171,13 +221,111 @@ export default function SurahScreen() {
   );
 }
 
+const Ayah = memo(function Ayah({
+  surah,
+  ayah,
+  arabic,
+  translit,
+  translation,
+  words,
+  position,
+  playing,
+  onPlay,
+}: {
+  surah: number;
+  ayah: number;
+  arabic: string;
+  translit: string;
+  translation: string;
+  words: number;
+  position: Position | null;
+  playing: boolean;
+  onPlay: () => void;
+}) {
+  const active = position !== null;
+
+  // Arabic: the word being recited is lit up.
+  const activeWord = position ? arabicWordIndex(arabic, position.word, words) : -1;
+  let wordNo = -1;
+  const arabicParts = arabic.split(/(\s+)/).map((part, i) => {
+    const isWord = part.trim() && !/^[ؐ-ًؚ-ٰٟۖ-ۭ]+$/.test(part);
+    if (isWord) wordNo++;
+    const lit = isWord && wordNo === activeWord;
+    return (
+      <Txt key={i} style={lit ? styles.arabicLit : undefined}>
+        {part}
+      </Txt>
+    );
+  });
+
+  // Transliteration fills in as it is recited, up to the end of the current word.
+  let cut = 0;
+  if (position && position.progress > 0) {
+    const at = Math.round(position.progress * translit.length);
+    const space = translit.indexOf(' ', Math.max(0, at - 1));
+    cut = space === -1 ? translit.length : space;
+  }
+
+  return (
+    <Glass strong={active} style={[styles.ayah, active && { borderColor: HIGHLIGHT }]}>
+      <View style={styles.ayahHeader}>
+        <View style={styles.ayahNo}>
+          <Txt size={12} weight="semibold">
+            {surah}:{ayah}
+          </Txt>
+        </View>
+        <Pressable hitSlop={10} onPress={onPlay}>
+          <Ionicons name={playing ? 'pause-circle' : 'play-circle-outline'} size={30} color="#fff" />
+        </Pressable>
+      </View>
+      <Txt style={styles.arabic}>{arabicParts}</Txt>
+      <Txt size={16} weight="medium" style={styles.translit}>
+        {active ? (
+          <>
+            <Txt size={16} weight="semibold" style={styles.translitLit}>
+              {translit.slice(0, cut)}
+            </Txt>
+            <Txt size={16} weight="medium" style={styles.translitDim}>
+              {translit.slice(cut)}
+            </Txt>
+          </>
+        ) : (
+          translit
+        )}
+      </Txt>
+      <Txt dim size={15} style={{ lineHeight: 22 }}>
+        {translation}
+      </Txt>
+    </Glass>
+  );
+});
+
 const styles = StyleSheet.create({
-  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   surahArabic: { fontFamily: FONT.arabic, fontSize: 34, lineHeight: 70 },
-  basmala: { fontFamily: FONT.arabic, fontSize: 26, lineHeight: 56, marginTop: 4 },
+  basmala: {
+    fontFamily: FONT.arabic,
+    fontSize: 26,
+    lineHeight: 56,
+    marginTop: 4,
+  },
   ayah: { marginBottom: 12, gap: 10 },
-  ayahHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  ayahNo: { backgroundColor: GLASS.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  ayahHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ayahNo: {
+    backgroundColor: GLASS.bg,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
   arabic: {
     fontFamily: FONT.arabic,
     fontSize: 28,
@@ -185,8 +333,17 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  translit: { color: '#FFE6B0', lineHeight: 23 },
-  player: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16 },
+  arabicLit: { fontFamily: FONT.arabic, fontSize: 28, color: HIGHLIGHT },
+  translit: { color: HIGHLIGHT, lineHeight: 23 },
+  translitLit: { color: HIGHLIGHT },
+  translitDim: { color: 'rgba(255,230,176,0.4)' },
+  player: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+  },
   playerInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -202,4 +359,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  track: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    overflow: 'hidden',
+  },
+  trackFill: { height: 4, backgroundColor: HIGHLIGHT },
 });

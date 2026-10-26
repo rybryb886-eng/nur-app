@@ -10,7 +10,9 @@ import { useT } from '@/lib/i18n';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 function icon(name: IconName) {
-  return ({ color, size }: { color: ColorValue; size: number }) => <Ionicons name={name} color={color as string} size={size} />;
+  return ({ color, size }: { color: ColorValue; size: number }) => (
+    <Ionicons name={name} color={color as string} size={size} />
+  );
 }
 
 export default function TabLayout() {
@@ -37,8 +39,14 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: t('tabPrayer'), tabBarIcon: icon('time-outline') }} />
       <Tabs.Screen name="qibla" options={{ title: t('tabQibla'), tabBarIcon: icon('compass-outline') }} />
       <Tabs.Screen name="quran" options={{ title: t('tabQuran'), tabBarIcon: icon('book-outline') }} />
-      <Tabs.Screen name="hadith" options={{ title: t('tabHadith'), tabBarIcon: icon('library-outline') }} />
-      <Tabs.Screen name="dhikr" options={{ title: t('tabDhikr'), tabBarIcon: icon('radio-button-on-outline') }} />
+      <Tabs.Screen name="sermons" options={{ title: t('tabSermons'), tabBarIcon: icon('mic-outline') }} />
+      <Tabs.Screen
+        name="dhikr"
+        options={{
+          title: t('tabDhikr'),
+          tabBarIcon: icon('radio-button-on-outline'),
+        }}
+      />
     </Tabs>
   );
 }

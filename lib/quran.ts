@@ -27,10 +27,4 @@ export function getSurah(n: number): SurahText {
   return loadSurahData(n);
 }
 
-/** Per-ayah recitation by Mishary Rashid Alafasy. */
-export function ayahAudioUrl(surah: number, ayah: number) {
-  const pad = (x: number) => String(x).padStart(3, '0');
-  return `https://everyayah.com/data/Alafasy_128kbps/${pad(surah)}${pad(ayah)}.mp3`;
-}
-
 export const BASMALA = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';

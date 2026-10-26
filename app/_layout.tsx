@@ -12,7 +12,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { HadithPlayerProvider } from '@/lib/hadithPlayer';
 import { NotificationScheduler } from '@/lib/notifications';
 import { SettingsProvider, useSettings } from '@/lib/settings';
 import { WidgetSync } from '@/widgets/sync';
@@ -25,7 +24,10 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-const theme = { ...DarkTheme, colors: { ...DarkTheme.colors, background: '#0D1640' } };
+const theme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: '#0D1640' },
+};
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -42,9 +44,7 @@ export default function RootLayout() {
 
   return (
     <SettingsProvider>
-      <HadithPlayerProvider>
-        <Root fontsLoaded={loaded} />
-      </HadithPlayerProvider>
+      <Root fontsLoaded={loaded} />
     </SettingsProvider>
   );
 }
@@ -67,6 +67,8 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="city" options={{ presentation: 'modal' }} />
         <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="learn/index" />
+        <Stack.Screen name="learn/[id]" />
       </Stack>
     </ThemeProvider>
   );
