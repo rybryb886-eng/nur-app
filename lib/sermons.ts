@@ -35,7 +35,9 @@ function decode(s: string) {
 async function fetchChannel(channel: SermonChannel): Promise<Sermon[]> {
   const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`, {
     // YouTube answers the feed with an error page to clients that don't look like a browser.
-    headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36',
+    },
   });
   if (!res.ok) throw new Error(String(res.status));
   const xml = await res.text();
