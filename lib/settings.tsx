@@ -26,6 +26,9 @@ export type MethodId =
   | 'Singapore'
   | 'Tehran';
 
+export type NotifSound = 'default' | 'chime' | 'soft' | 'silent';
+export type NotifVibration = 'off' | 'short' | 'long';
+
 export type Settings = {
   lang: Lang;
   place: Place;
@@ -34,6 +37,10 @@ export type Settings = {
   quranTranslation: 'kk' | 'ru';
   translitScript: 'cyr' | 'lat';
   notifications: boolean;
+  /** Whether we already asked for notification permission on first launch. */
+  notifAsked: boolean;
+  notifSound: NotifSound;
+  notifVibration: NotifVibration;
   lastRead?: { surah: number; ayah: number };
 };
 
@@ -45,9 +52,22 @@ const DEFAULTS: Settings = {
   quranTranslation: 'kk',
   translitScript: 'cyr',
   notifications: false,
+  notifAsked: false,
+  notifSound: 'chime',
+  notifVibration: 'short',
 };
 
 const KEY = 'nur.settings.v1';
+
+/** Saved settings outside React, e.g. for the home screen widget's background task. */
+export async function readSettings(): Promise<Settings> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY);
+    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
+  } catch {
+    return DEFAULTS;
+  }
+}
 
 type Ctx = {
   settings: Settings;

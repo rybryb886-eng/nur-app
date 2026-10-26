@@ -12,8 +12,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import { HadithPlayerProvider } from '@/lib/hadithPlayer';
 import { NotificationScheduler } from '@/lib/notifications';
 import { SettingsProvider, useSettings } from '@/lib/settings';
+import { WidgetSync } from '@/widgets/sync';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -40,7 +42,9 @@ export default function RootLayout() {
 
   return (
     <SettingsProvider>
-      <Root fontsLoaded={loaded} />
+      <HadithPlayerProvider>
+        <Root fontsLoaded={loaded} />
+      </HadithPlayerProvider>
     </SettingsProvider>
   );
 }
@@ -58,6 +62,7 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
     <ThemeProvider value={theme}>
       <StatusBar style="light" />
       <NotificationScheduler />
+      <WidgetSync />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="city" options={{ presentation: 'modal' }} />

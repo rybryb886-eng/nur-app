@@ -1,13 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { createAudioPlayer } from 'expo-audio';
+import { Pressable, ScrollView, StyleSheet, Switch, Vibration, View } from 'react-native';
 
 import { Chip, Glass, ScreenTitle, Sky, Txt } from '@/components/ui';
 import { useT } from '@/lib/i18n';
-import { requestNotificationPermission } from '@/lib/notifications';
+import { requestNotificationPermission, VIBRATION_PATTERNS } from '@/lib/notifications';
 import { METHODS } from '@/lib/prayer';
-import { useSettings } from '@/lib/settings';
+import { NotifSound, NotifVibration, useSettings } from '@/lib/settings';
+
+const SOUND_ASSETS: Partial<Record<NotifSound, number>> = {
+  chime: require('@/assets/sounds/chime.wav'),
+  soft: require('@/assets/sounds/soft.wav'),
+};
+
+function previewSound(sound: NotifSound) {
+  const asset = SOUND_ASSETS[sound];
+  if (!asset) return;
+  const player = createAudioPlayer(asset);
+  player.play();
+  setTimeout(() => player.remove(), 4000);
+}
 import { GLASS } from '@/lib/sky';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -55,6 +69,51 @@ export default function SettingsScreen() {
                 update({ notifications: on });
               }}
             />
+          </View>
+        </Section>
+
+        <Section title={t('notifSound')}>
+          <View style={styles.chips}>
+            {(
+              [
+                ['chime', t('soundChime')],
+                ['soft', t('soundSoft')],
+                ['default', t('soundDefault')],
+                ['silent', t('soundSilent')],
+              ] as [NotifSound, string][]
+            ).map(([id, label]) => (
+              <Chip
+                key={id}
+                label={label}
+                active={settings.notifSound === id}
+                onPress={() => {
+                  update({ notifSound: id });
+                  previewSound(id);
+                }}
+              />
+            ))}
+          </View>
+        </Section>
+
+        <Section title={t('vibration')}>
+          <View style={styles.chips}>
+            {(
+              [
+                ['short', t('vibrationShort')],
+                ['long', t('vibrationLong')],
+                ['off', t('vibrationOff')],
+              ] as [NotifVibration, string][]
+            ).map(([id, label]) => (
+              <Chip
+                key={id}
+                label={label}
+                active={settings.notifVibration === id}
+                onPress={() => {
+                  update({ notifVibration: id });
+                  if (id !== 'off') Vibration.vibrate(VIBRATION_PATTERNS[id]);
+                }}
+              />
+            ))}
           </View>
         </Section>
 

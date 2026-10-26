@@ -23,8 +23,13 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
-      "predictiveBackGestureEnabled": false
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -50,7 +55,11 @@
       [
         "expo-notifications",
         {
-          "color": "#1D2A63"
+          "color": "#1D2A63",
+          "sounds": [
+            "./assets/sounds/chime.wav",
+            "./assets/sounds/soft.wav"
+          ]
         }
       ],
       [
@@ -60,7 +69,25 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Prayer",
+              "label": "Нұр: намаз уақыты",
+              "description": "Келесі намаз және бүгінгі уақыттар",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

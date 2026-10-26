@@ -1,8 +1,10 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import { useEffect, useRef, useState } from 'react';
+import { useIsFocused } from 'expo-router';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Glass, ScreenTitle, Sky, Txt } from '@/components/ui';
 import { useT } from '@/lib/i18n';
@@ -13,22 +15,38 @@ import { GLASS } from '@/lib/sky';
 const DIAL = 290;
 const TOLERANCE = 5;
 
-function useHeading() {
+// Low-pass filter strength: lower is smoother but lags more.
+const SMOOTHING = 0.15;
+
+/**
+ * Compass heading, smoothed. Listens only while `active` so the sensor (and the haptic it drives)
+ * stops when the Qibla tab is not on screen.
+ */
+function useHeading(active: boolean) {
   const [heading, setHeading] = useState<number | null>(null);
   const [available, setAvailable] = useState(Platform.OS !== 'web');
+  const vector = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || !active) return;
     let sub: Location.LocationSubscription | undefined;
     let cancelled = false;
     (async () => {
       try {
         await Location.requestForegroundPermissionsAsync();
-        sub = await Location.watchHeadingAsync((h) => {
-          const value = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
-          setHeading(value);
+        const s = await Location.watchHeadingAsync((h) => {
+          const raw = ((h.trueHeading >= 0 ? h.trueHeading : h.magHeading) * Math.PI) / 180;
+          // Average on the unit circle so 359° and 1° blend to 0°, not 180°.
+          const prev = vector.current ?? { x: Math.cos(raw), y: Math.sin(raw) };
+          const next = {
+            x: prev.x + SMOOTHING * (Math.cos(raw) - prev.x),
+            y: prev.y + SMOOTHING * (Math.sin(raw) - prev.y),
+          };
+          vector.current = next;
+          setHeading(((Math.atan2(next.y, next.x) * 180) / Math.PI + 360) % 360);
         });
-        if (cancelled) sub.remove();
+        if (cancelled) s.remove();
+        else sub = s;
       } catch {
         setAvailable(false);
       }
@@ -37,26 +55,67 @@ function useHeading() {
       cancelled = true;
       sub?.remove();
     };
-  }, []);
+  }, [active]);
 
   return { heading, available };
 }
+
+/** Animated dial rotation that always turns the short way round. */
+function useDialRotation(heading: number | null) {
+  const angle = useSharedValue(0);
+  useEffect(() => {
+    if (heading === null) return;
+    const target = -heading;
+    const delta = ((target - angle.value + 540) % 360) - 180;
+    angle.value = withTiming(angle.value + delta, { duration: 180, easing: Easing.out(Easing.quad) });
+  }, [heading]);
+  return useAnimatedStyle(() => ({ transform: [{ rotate: `${angle.value}deg` }] }));
+}
+
+/** Ticks, letters and the Kaaba marker. Memoised: only the wrapper rotates on each heading update. */
+const DialFace = memo(function DialFace({ bearing, facing }: { bearing: number; facing: boolean }) {
+  return (
+    <>
+      {Array.from({ length: 72 }, (_, i) => (
+        <View
+          key={i}
+          style={[styles.tickHolder, { transform: [{ rotate: `${i * 5}deg` }] }]}>
+          <View style={[styles.tick, i % 18 === 0 ? styles.tickMajor : i % 6 === 0 && styles.tickMid]} />
+        </View>
+      ))}
+      {(['N', 'E', 'S', 'W'] as const).map((c, i) => (
+        <View key={c} style={[styles.tickHolder, { transform: [{ rotate: `${i * 90}deg` }] }]}>
+          <Txt weight="bold" size={16} style={[styles.cardinal, c === 'N' && { color: '#FF8A8A' }]}>
+            {c}
+          </Txt>
+        </View>
+      ))}
+      <View style={[styles.tickHolder, { transform: [{ rotate: `${bearing}deg` }] }]}>
+        <View style={styles.needle} />
+        <View style={styles.kaaba}>
+          <MaterialCommunityIcons name="cube" size={30} color={facing ? GLASS.success : '#FFE6B0'} />
+        </View>
+      </View>
+    </>
+  );
+});
 
 export default function QiblaScreen() {
   const t = useT();
   const { settings } = useSettings();
   const bearing = qiblaBearing(settings.place);
   const distance = distanceToMeccaKm(settings.place);
-  const { heading, available } = useHeading();
+  const focused = useIsFocused();
+  const { heading, available } = useHeading(focused);
+  const dialStyle = useDialRotation(heading);
 
   const live = available && heading !== null;
-  const rotation = live ? -heading : 0;
   const diff = live ? ((bearing - heading + 540) % 360) - 180 : null;
   const facing = diff !== null && Math.abs(diff) <= TOLERANCE;
 
   const wasFacing = useRef(false);
   useEffect(() => {
-    if (facing && !wasFacing.current && Platform.OS !== 'web') {
+    if (facing && !wasFacing.current && focused && Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
     wasFacing.current = facing;
@@ -82,33 +141,10 @@ export default function QiblaScreen() {
         <View style={styles.dialWrap}>
           {/* fixed pointer at the top: the direction the phone is facing */}
           <View style={styles.pointer} />
-          <View
-            style={[
-              styles.dial,
-              facing && { borderColor: GLASS.success, shadowColor: GLASS.success },
-              { transform: [{ rotate: `${rotation}deg` }] },
-            ]}>
-            {Array.from({ length: 72 }, (_, i) => (
-              <View
-                key={i}
-                style={[styles.tickHolder, { transform: [{ rotate: `${i * 5}deg` }] }]}>
-                <View style={[styles.tick, i % 18 === 0 ? styles.tickMajor : i % 6 === 0 && styles.tickMid]} />
-              </View>
-            ))}
-            {(['N', 'E', 'S', 'W'] as const).map((c, i) => (
-              <View key={c} style={[styles.tickHolder, { transform: [{ rotate: `${i * 90}deg` }] }]}>
-                <Txt weight="bold" size={16} style={[styles.cardinal, c === 'N' && { color: '#FF8A8A' }]}>
-                  {c}
-                </Txt>
-              </View>
-            ))}
-            <View style={[styles.tickHolder, { transform: [{ rotate: `${bearing}deg` }] }]}>
-              <View style={styles.needle} />
-              <View style={styles.kaaba}>
-                <MaterialCommunityIcons name="cube" size={30} color={facing ? GLASS.success : '#FFE6B0'} />
-              </View>
-            </View>
-          </View>
+          <Animated.View
+            style={[styles.dial, facing && { borderColor: GLASS.success, shadowColor: GLASS.success }, dialStyle]}>
+            <DialFace bearing={bearing} facing={facing} />
+          </Animated.View>
           <View style={styles.hub} />
         </View>
 

@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HadithMiniPlayer } from '@/components/HadithMiniPlayer';
 import { FONT, Glass, Sky, Txt } from '@/components/ui';
 import { BOOKS, Hadith, HadithBook, loadSection } from '@/lib/hadith';
+import { useHadithPlayer } from '@/lib/hadithPlayer';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
 
@@ -29,6 +32,18 @@ export default function HadithSectionScreen() {
 
   useEffect(load, [load]);
 
+  const player = useHadithPlayer();
+  const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList<Hadith>>(null);
+  const current =
+    player.track?.book === book.id && player.track.section === section.n ? player.track.index : null;
+
+  // Follow the reader through the list.
+  useEffect(() => {
+    if (current === null || !items || current >= items.length) return;
+    listRef.current?.scrollToIndex({ index: current, animated: true, viewPosition: 0.1 });
+  }, [current, items]);
+
   return (
     <Sky>
       <View style={styles.topBar}>
@@ -43,7 +58,15 @@ export default function HadithSectionScreen() {
             {book[settings.lang]}
           </Txt>
         </View>
-        <View style={{ width: 28 }} />
+        <Pressable
+          hitSlop={12}
+          onPress={() => (current !== null ? player.toggle() : items && player.play(book.id, section.n, 0, items))}>
+          <Ionicons
+            name={current !== null && player.playing ? 'pause-circle' : 'play-circle'}
+            size={30}
+            color="#fff"
+          />
+        </Pressable>
       </View>
 
       {error ? (
@@ -64,17 +87,30 @@ export default function HadithSectionScreen() {
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           data={items}
           keyExtractor={(h) => String(h.number)}
-          contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
-          renderItem={({ item }) => (
-            <Glass style={{ marginBottom: 12, gap: 10 }}>
+          contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
+          onScrollToIndexFailed={(info) =>
+            setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: false }), 200)
+          }
+          renderItem={({ item, index }) => (
+            <Glass
+              strong={current === index}
+              style={[{ marginBottom: 12, gap: 10 }, current === index && { borderColor: '#FFE6B0' }]}>
               <View style={styles.head}>
                 <Txt size={13} weight="semibold" style={styles.badge}>
                   {t('hadithNo')}
                   {item.number}
                 </Txt>
-                <View style={{ flexDirection: 'row', gap: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                  <Pressable hitSlop={8} onPress={() => player.play(book.id, section.n, index, items)}>
+                    <Ionicons
+                      name={current === index && player.playing ? 'volume-high' : 'play-circle-outline'}
+                      size={22}
+                      color="#fff"
+                    />
+                  </Pressable>
                   {item.arabic && (
                     <Pressable
                       hitSlop={8}
@@ -101,6 +137,7 @@ export default function HadithSectionScreen() {
           )}
         />
       )}
+      <HadithMiniPlayer bottom={insets.bottom + 12} />
     </Sky>
   );
 }

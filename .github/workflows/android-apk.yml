@@ -31,6 +31,19 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # A new icon is requested by committing its image URL to assets/brand/icon-source.url:
+      # the icons are generated from it, committed back, and the URL file is removed.
+      - name: Import app icon
+        if: hashFiles('assets/brand/icon-source.url') != ''
+        run: |
+          command -v convert >/dev/null || (sudo apt-get update -q && sudo apt-get install -yq imagemagick)
+          scripts/import-icon.sh "$(cat assets/brand/icon-source.url)"
+          git rm -q assets/brand/icon-source.url
+          git add assets/images
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Update app icons"
+          git push
+
       - run: npm ci
 
       - name: Generate native Android project
