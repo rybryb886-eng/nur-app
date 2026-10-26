@@ -52,7 +52,7 @@ jobs:
       # Release build signed with the debug key: fine for sideloading, not for Google Play.
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 --no-daemon
         env:
           GRADLE_OPTS: -Xmx4g
 
@@ -74,3 +74,43 @@ jobs:
               --title "Нұр: тестовая сборка (${{ github.ref_name }})" \
               --notes "APK для установки на Android. Обновляется после каждого изменения ветки ${{ github.ref_name }}."
           gh release upload "$TAG" "nur-${{ github.ref_name }}.apk" --clobber
+
+  # Installs the APK on an emulator and launches it, so a crash at startup fails the run
+  # and its stack trace lands in the log.
+  smoke-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nur-apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb install -r nur-${{ github.ref_name }}.apk
+            adb logcat -c
+            adb shell monkey -p kz.nurapp.app -c android.intent.category.LAUNCHER 1
+            sleep 25
+            adb exec-out screencap -p > screen.png
+            adb logcat -d -v brief | grep -E "AndroidRuntime|FATAL|ReactNative|ReactNativeJS|Expo|kz.nurapp" | tail -n 300 || true
+            adb shell pidof kz.nurapp.app
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-screen
+          path: screen.png

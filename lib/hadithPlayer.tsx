@@ -19,7 +19,7 @@ function speakable(text: string) {
 function chunks(text: string): string[] {
   const out: string[] = [];
   let current = '';
-  for (const sentence of text.split(/(?<=[.!?»])\s+/)) {
+  for (const sentence of (text.match(/[^.!?»]+[.!?»]*/g) ?? [text]).map((s) => s.trim()).filter(Boolean)) {
     if (current && current.length + sentence.length + 1 > MAX_CHUNK) {
       out.push(current);
       current = '';
