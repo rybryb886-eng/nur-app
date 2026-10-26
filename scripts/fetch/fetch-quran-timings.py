@@ -15,8 +15,10 @@ os.makedirs(OUT, exist_ok=True)
 def get(url):
     for attempt in range(5):
         try:
-            return json.loads(urllib.request.urlopen(url, timeout=60).read())
-        except Exception:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (nur-app data build)"})
+            return json.loads(urllib.request.urlopen(req, timeout=60).read())
+        except Exception as e:
+            print("retry", url, e)
             time.sleep(2 ** attempt)
     raise RuntimeError(url)
 

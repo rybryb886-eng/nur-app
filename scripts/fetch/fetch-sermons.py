@@ -10,8 +10,9 @@ channels = json.load(open("lib/sermonChannels.json"))
 items = []
 for ch in channels:
     try:
-        xml = urllib.request.urlopen(
-            f"https://www.youtube.com/feeds/videos.xml?channel_id={ch['id']}", timeout=30).read().decode()
+        req = urllib.request.Request(f"https://www.youtube.com/feeds/videos.xml?channel_id={ch['id']}",
+                                     headers={"User-Agent": "Mozilla/5.0 (nur-app data build)"})
+        xml = urllib.request.urlopen(req, timeout=30).read().decode()
     except Exception as e:
         print("failed", ch, e)
         continue
