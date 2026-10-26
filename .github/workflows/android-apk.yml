@@ -97,6 +97,22 @@ jobs:
             adb exec-out screencap -p > screen.png
             adb logcat -d -v brief | grep -E "AndroidRuntime|FATAL|ReactNative|ReactNativeJS|Expo|kz.nurapp" | tail -n 300 || true
             adb shell pidof kz.nurapp.app
+            # Visit the main screens; each screenshot goes into the log as base64 between markers.
+            shot() { sleep "$2"; echo "=== SHOT $1"; adb exec-out screencap -p | base64 -w 0; echo; echo "=== END $1"; }
+            adb shell input keyevent 4; sleep 2
+            shot home 3
+            adb shell am start -W -a android.intent.action.VIEW -d "nur:///surah/1" kz.nurapp.app
+            shot surah 6
+            adb shell input tap 40 600
+            shot surah-playing 15
+            adb shell am start -W -a android.intent.action.VIEW -d "nur:///sermons" kz.nurapp.app
+            shot sermons 10
+            adb shell input tap 160 200
+            shot sermon-playing 15
+            adb shell am start -W -a android.intent.action.VIEW -d "nur:///learn/prayer" kz.nurapp.app
+            shot learn 5
+            adb logcat -d -v brief | grep -E "FATAL|AndroidRuntime: |ReactNativeJS" | tail -n 80 || true
+            adb shell pidof kz.nurapp.app
 
       - uses: actions/upload-artifact@v4
         if: always()
