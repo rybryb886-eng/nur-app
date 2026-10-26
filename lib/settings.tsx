@@ -12,6 +12,7 @@ export type Place = {
 };
 
 export type MethodId =
+  | 'Kazakhstan'
   | 'MuslimWorldLeague'
   | 'Turkey'
   | 'Egyptian'
@@ -39,7 +40,7 @@ export type Settings = {
 const DEFAULTS: Settings = {
   lang: 'kk',
   place: { name: 'Астана', lat: 51.1694, lon: 71.4491, tz: 'Asia/Almaty' },
-  method: 'MuslimWorldLeague',
+  method: 'Kazakhstan',
   hanafi: true,
   quranTranslation: 'kk',
   translitScript: 'cyr',

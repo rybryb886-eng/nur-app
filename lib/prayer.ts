@@ -13,6 +13,7 @@ export const PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as
 export type PrayerKey = (typeof PRAYERS)[number];
 
 export const METHODS: { id: MethodId; label: string }[] = [
+  { id: 'Kazakhstan', label: 'ҚМДБ / ДУМК, Қазақстан (15° / 15°)' },
   { id: 'MuslimWorldLeague', label: 'Muslim World League (18° / 17°)' },
   { id: 'Turkey', label: 'Diyanet, Türkiye' },
   { id: 'Egyptian', label: 'Egyptian General Authority' },
@@ -26,6 +27,19 @@ export const METHODS: { id: MethodId; label: string }[] = [
   { id: 'Singapore', label: 'Singapore' },
   { id: 'Tehran', label: 'Tehran' },
 ];
+
+/**
+ * Kazakhstan's Spiritual Administration (muftyat.kz): Fajr and Isha at 15°, with safety minutes on
+ * sunrise, Dhuhr, Asr and Maghrib. Matched to the official Astana timetable for 26 Oct 2026.
+ */
+function methodParams(method: MethodId) {
+  if (method !== 'Kazakhstan') return CalculationMethod[method]();
+  const params = CalculationMethod.Other();
+  params.fajrAngle = 15;
+  params.ishaAngle = 15;
+  params.methodAdjustments = { fajr: 0, sunrise: -5, dhuhr: 5, asr: 5, maghrib: 5, isha: 0 };
+  return params;
+}
 
 export function deviceTimeZone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -45,7 +59,7 @@ function localDate(at: Date, tz?: string) {
 
 export function computeTimes(place: Place, method: MethodId, hanafi: boolean, at = new Date(), dayOffset = 0) {
   const coords = new Coordinates(place.lat, place.lon);
-  const params = CalculationMethod[method]();
+  const params = methodParams(method);
   params.madhab = hanafi ? Madhab.Hanafi : Madhab.Shafi;
   params.highLatitudeRule = HighLatitudeRule.recommended(coords);
   const day = localDate(at, place.tz);
@@ -130,9 +144,12 @@ const HIJRI_MONTHS = {
   ru: ['Мухаррам', 'Сафар', 'Раби аль-авваль', 'Раби ас-сани', 'Джумада аль-уля', 'Джумада ас-сани', 'Раджаб', 'Шабан', 'Рамадан', 'Шавваль', 'Зуль-када', 'Зуль-хиджа'],
 };
 
-/** Tabular (arithmetical) Hijri date; can differ from the announced date by a day. */
+// The tabular calendar ran one day behind the date muftyat.kz announced (26 Oct 2026 = 15 Jumada al-Ula 1448).
+const HIJRI_OFFSET_DAYS = 1;
+
+/** Tabular (arithmetical) Hijri date, shifted to match the announced date; can still drift by a day. */
 export function hijriDate(d: Date, lang: 'kk' | 'ru') {
-  const jd = Math.floor(d.getTime() / 86400000) + 2440588; // Julian day number (UTC)
+  const jd = Math.floor(d.getTime() / 86400000) + 2440588 + HIJRI_OFFSET_DAYS; // Julian day number (UTC)
   let l = jd - 1948440 + 10632;
   const n = Math.floor((l - 1) / 10631);
   l = l - 10631 * n + 354;
