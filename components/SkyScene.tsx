@@ -113,11 +113,11 @@ function Celestial({ phase, width }: { phase: SkyPhase; width: number }) {
   const night = phase === 'night';
   const pos = {
     // Kept in the top band, where screens have only their title, so it never sits behind text.
-    night: { top: 64, left: width * 0.84 },
-    dawn: { top: 70, left: width * 0.8 },
-    day: { top: 56, left: width * 0.86 },
-    golden: { top: 64, left: width * 0.84 },
-    sunset: { top: 72, left: width * 0.8 },
+    night: { top: 46, left: width * 0.74 },
+    dawn: { top: 50, left: width * 0.74 },
+    day: { top: 44, left: width * 0.74 },
+    golden: { top: 48, left: width * 0.74 },
+    sunset: { top: 52, left: width * 0.74 },
   }[phase];
   const color = {
     night: '#E8EDFF',
@@ -153,7 +153,7 @@ function Celestial({ phase, width }: { phase: SkyPhase; width: number }) {
         {night ? (
           // Crescent: a disc with an offset disc cut out of it.
           <Path
-            d={`M ${S / 2 + 4} ${S / 2 - 26} A 26 26 0 1 0 ${S / 2 + 4} ${S / 2 + 26} A 32 32 0 0 1 ${S / 2 + 4} ${S / 2 - 26} Z`}
+            d={`M ${S / 2 + 3} ${S / 2 - 20} A 20 20 0 1 0 ${S / 2 + 3} ${S / 2 + 20} A 25 25 0 0 1 ${S / 2 + 3} ${S / 2 - 20} Z`}
             fill={color}
           />
         ) : (

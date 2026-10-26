@@ -33,7 +33,10 @@ function decode(s: string) {
 
 /** Latest videos of one channel from its public RSS feed (no API key needed). */
 async function fetchChannel(channel: SermonChannel): Promise<Sermon[]> {
-  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`);
+  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`, {
+    // YouTube answers the feed with an error page to clients that don't look like a browser.
+    headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36' },
+  });
   if (!res.ok) throw new Error(String(res.status));
   const xml = await res.text();
   const out: Sermon[] = [];

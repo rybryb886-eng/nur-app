@@ -46,7 +46,7 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   lang: 'kk',
-  place: { name: 'Астана', lat: 51.1694, lon: 71.4491, tz: 'Asia/Almaty' },
+  place: { name: 'Астана', lat: 51.1694, lon: 71.4491, tz: 'Asia/Aqtobe' },
   method: 'Kazakhstan',
   hanafi: true,
   quranTranslation: 'kk',
@@ -60,10 +60,23 @@ const DEFAULTS: Settings = {
 const KEY = 'nur.settings.v1';
 
 /** Saved settings outside React, e.g. for the home screen widget's background task. */
+/**
+ * Kazakhstan moved to a single UTC+5 zone in March 2024, but phones with older time zone data still
+ * put Asia/Almaty and Asia/Qostanay at UTC+6. Asia/Aqtobe has been UTC+5 throughout, so it gives the
+ * right local time on every phone.
+ */
+const STALE_TZ = new Set(['Asia/Almaty', 'Asia/Qostanay']);
+
+function parse(raw: string): Settings {
+  const s: Settings = { ...DEFAULTS, ...JSON.parse(raw) };
+  if (s.place.tz && STALE_TZ.has(s.place.tz)) s.place = { ...s.place, tz: 'Asia/Aqtobe' };
+  return s;
+}
+
 export async function readSettings(): Promise<Settings> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
+    return raw ? parse(raw) : DEFAULTS;
   } catch {
     return DEFAULTS;
   }
@@ -84,7 +97,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => {
-        if (raw) setSettings({ ...DEFAULTS, ...JSON.parse(raw) });
+        if (raw) setSettings(parse(raw));
       })
       .catch(() => {})
       .finally(() => setReady(true));
