@@ -10,6 +10,8 @@ export type Step = {
   title: L;
   text: L;
   recite?: Recitation;
+  /** Illustration of the position or movement (generated with Higgsfield, checked against SOURCE). */
+  image?: number;
   /** Surah to open in the Quran reader, e.g. al-Fatiha. */
   surah?: number;
 };
@@ -45,6 +47,23 @@ export type Guide = {
   steps: Step[];
   rakats?: RakatRow[];
   notes?: { title: L; text: L }[];
+};
+
+const IMG = {
+  takbir: require('@/assets/learn/img/takbir.jpg'),
+  qiyam: require('@/assets/learn/img/qiyam.jpg'),
+  ruku: require('@/assets/learn/img/ruku.jpg'),
+  sujud: require('@/assets/learn/img/sujud.jpg'),
+  sitting: require('@/assets/learn/img/sitting.jpg'),
+  salam: require('@/assets/learn/img/salam.jpg'),
+  wHands: require('@/assets/learn/img/w-hands.jpg'),
+  wMouth: require('@/assets/learn/img/w-mouth.jpg'),
+  wNose: require('@/assets/learn/img/w-nose.jpg'),
+  wFace: require('@/assets/learn/img/w-face.jpg'),
+  wArms: require('@/assets/learn/img/w-arms.jpg'),
+  wHead: require('@/assets/learn/img/w-head.jpg'),
+  wEars: require('@/assets/learn/img/w-ears.jpg'),
+  wFeet: require('@/assets/learn/img/w-feet.jpg'),
 };
 
 // Recitations used in prayer. Kazakh transliteration and meanings follow «Ислам ғылымхалы» (see SOURCE).
@@ -198,6 +217,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wHands,
       title: { kk: 'Қолды жуу', ru: 'Мытьё рук' },
       text: {
         kk: 'Қолды білезікке дейін үш рет жуыңыз, саусақ араларын да ысқылаңыз. Сақина болса, астына су жеткізіңіз.',
@@ -205,6 +225,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wMouth,
       title: { kk: 'Ауызды шаю', ru: 'Полоскание рта' },
       text: {
         kk: 'Оң қолмен су алып, ауызды үш рет шайқап төгіңіз, су тамаққа дейін барсын (ораза болсаңыз, әсірелемеңіз). Мисуак не тіс щеткасын қолдану — сүннет.',
@@ -212,6 +233,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wNose,
       title: { kk: 'Мұрынды шаю', ru: 'Промывание носа' },
       text: {
         kk: 'Оң қолмен мұрынға кеңсірікке дейін су тартып, сол қолмен шығарыңыз. Үш рет қайталаңыз.',
@@ -219,6 +241,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wFace,
       title: { kk: 'Бетті жуу (парыз)', ru: 'Мытьё лица (фард)' },
       text: {
         kk: 'Бетті шаштың шетінен иек астына дейін, құлақтың түбіне дейін үш рет жуыңыз. Сақал, мұрт және қастың түбіне су барсын. Тығыз сақалды саусақпен салалаңыз.',
@@ -226,6 +249,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wArms,
       title: {
         kk: 'Қолды шынтаққа дейін жуу (парыз)',
         ru: 'Руки до локтей (фард)',
@@ -236,6 +260,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wHead,
       title: {
         kk: 'Басқа мәсих тарту (парыз)',
         ru: 'Протирание головы (фард)',
@@ -246,6 +271,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wEars,
       title: { kk: 'Құлақ пен мойын', ru: 'Уши и шея' },
       text: {
         kk: 'Сұқ саусақпен құлақтың ішін, бас бармақпен сыртын сипаңыз. Кейін саусақтың сыртымен мойынды сипаңыз.',
@@ -253,6 +279,7 @@ const wudu: Guide = {
       },
     },
     {
+      image: IMG.wFeet,
       title: {
         kk: 'Аяқты тобыққа дейін жуу (парыз)',
         ru: 'Ноги до щиколоток (фард)',
@@ -394,6 +421,7 @@ const howToPray: Guide = {
       },
     },
     {
+      image: IMG.takbir,
       title: { kk: 'Ифтитах тәкбірі', ru: 'Начальный такбир' },
       text: {
         kk: 'Ерлер бас бармақтарын құлақтың жұмсағына тақап, әйелдер қолдарын иық тұсына дейін көтеріп, алақандарын құбылаға қаратып «Аллаһу әкбар» дейді. Ерлер оң қолды сол қолдың үстіне қойып, бас бармақ пен шынашақпен білекті орап, кіндіктің астына байлайды. Әйелдер қолдарын кеудеге қояды, білекті орамайды.',
@@ -402,6 +430,7 @@ const howToPray: Guide = {
       recite: R.takbir,
     },
     {
+      image: IMG.qiyam,
       title: { kk: 'Сана', ru: 'Сана' },
       text: {
         kk: 'Тік тұрып, сәждеге қарап, ішіңізден Сана дұғасын оқыңыз.',
@@ -430,6 +459,7 @@ const howToPray: Guide = {
       surah: 112,
     },
     {
+      image: IMG.ruku,
       title: { kk: 'Рүкүғ', ru: 'Поясной поклон (руку‘)' },
       text: {
         kk: '«Аллаһу әкбар» деп еңкейіңіз (қол көтерілмейді). Ерлер саусақтарын ашып тізені ұстайды, арқа мен бас тең болады. Әйелдер қолдарын тізеге қояды, тізесі аздап бүгіледі.',
@@ -446,6 +476,7 @@ const howToPray: Guide = {
       recite: R.rising,
     },
     {
+      image: IMG.sujud,
       title: { kk: 'Сәжде', ru: 'Земной поклон (суджуд)' },
       text: {
         kk: '«Аллаһу әкбар» деп алдымен тізені, кейін қолды, сосын маңдай мен мұрынды жерге қойыңыз. Аяқ саусақтары құбылаға қарасын.',
@@ -454,6 +485,7 @@ const howToPray: Guide = {
       recite: R.sujud,
     },
     {
+      image: IMG.sitting,
       title: { kk: 'Отыру және екінші сәжде', ru: 'Сидение и второй поклон' },
       text: {
         kk: '«Аллаһу әкбар» деп басты көтеріп, бір тәсбих айтатындай уақыт отырыңыз, кейін «Аллаһу әкбар» деп екінші сәжде жасаңыз. Бұл — бірінші рәкат.',
@@ -468,6 +500,7 @@ const howToPray: Guide = {
       },
     },
     {
+      image: IMG.sitting,
       title: { kk: 'Соңғы отырыс', ru: 'Последнее сидение' },
       text: {
         kk: 'Екінші сәждеден кейін отырып, Әт-тахиятты оқыңыз. Ерлер сол аяғын жатқызып үстіне отырады, оң аяғын тік ұстайды. Әйелдер аяқтарын оң жағына шығарып, жерге отырады. Қолдар санның үстінде. «Ләә иләһә» дегенде оң қолдың сұқ саусағы көтеріліп, «иллаллаһ» дегенде түседі.',
@@ -492,6 +525,7 @@ const howToPray: Guide = {
       recite: R.rabbana,
     },
     {
+      image: IMG.salam,
       title: { kk: 'Сәлем беру', ru: 'Приветствие (салям)' },
       text: {
         kk: 'Алдымен оңға, кейін солға бұрылып, «Әс-сәламу а’лайкум уә рахматуллаһ» деп сәлем беріңіз. Намаз аяқталды.',

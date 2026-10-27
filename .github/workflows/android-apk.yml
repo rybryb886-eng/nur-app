@@ -3,6 +3,7 @@ name: Android APK
 on:
   push:
     branches: [main, mvp]
+    paths-ignore: ['assets/learn/media.txt']
   workflow_dispatch:
 
 permissions:

@@ -35,6 +35,10 @@ shot sermon-playing 20
 shot sermon-playing-later 20
 open_link "nur:///learn/prayer"
 shot learn 5
+adb shell input swipe 540 1700 540 500 400
+shot learn-scrolled 3
+open_link "nur:///learn/wudu"
+shot learn-wudu 5
 
 adb logcat -d -v brief | grep -E "FATAL|AndroidRuntime|ReactNativeJS" | tail -n 80
 adb shell pidof "$PKG"

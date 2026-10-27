@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -107,6 +108,9 @@ export default function GuideScreen() {
               <Txt size={16} weight="semibold">
                 {step.title[lang]}
               </Txt>
+              {step.image && (
+                <Image source={step.image} style={styles.image} contentFit="cover" transition={200} />
+              )}
               <Txt dim size={14} style={{ lineHeight: 21 }}>
                 {step.text[lang]}
               </Txt>
@@ -162,6 +166,7 @@ export default function GuideScreen() {
 
 const styles = StyleSheet.create({
   source: { flexDirection: 'row', gap: 8, marginTop: 12, paddingHorizontal: 4 },
+  image: { width: '100%', aspectRatio: 1, borderRadius: 14 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
