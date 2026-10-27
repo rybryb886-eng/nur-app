@@ -6,3 +6,14 @@ d-ruku.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1
 d-sujud.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005358_601ac663-82f9-41ed-905f-da39b5a385b8.png
 d-sitting.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005358_e499d6d8-597d-43a4-99ab-a6c642e9a548.png
 d-salam.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005359_fbf60e18-82c0-44a4-8fc8-8fe7b2a1e3b8.png
+d-ruku2.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005528_60a6e265-b67c-4c3e-a459-444cc78ededb.png
+d-sujud2.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005528_ab2a55c6-f8f6-421a-9554-3157a6fa9bc5.png
+d-salam2.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005528_1a26d2b4-45a3-4db5-96a2-8b458b3aaca6.png
+w-hands.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005613_15d3755a-7b7a-4a7c-93fd-f02df8f5f365.png
+w-mouth.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005612_5cc6a336-1546-4173-8e14-1b0e22480034.png
+w-nose.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005612_dcc51386-0bb8-4b02-86ad-339999894bf5.png
+w-face.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005612_2d9cf35c-8dae-4bd7-96de-eb1d0314d7fe.png
+w-arms.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005611_fe958bd9-debd-43a3-b815-1e69ed060a9f.png
+w-head.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005613_5ea858c2-d80a-47fd-a527-13d6a45fe074.png
+w-ears.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005612_29e7237b-442f-46e8-995c-4767ecd87424.png
+w-feet.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005613_1818aef3-3b5b-4413-979b-985027a5ea59.png
