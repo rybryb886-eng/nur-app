@@ -20,7 +20,8 @@ export const watchUrl = (id: string) => `https://youtu.be/${id}`;
 
 /** Title without the trailing "| Speaker" part. */
 export function shortTitle(s: Sermon) {
-  return s.speaker ? s.title.split('|').slice(0, -1).join('|').trim() || s.title : s.title;
+  const title = s.title.replace(/\s*\|\s*MUFTYAT\.KZ\s*$/i, '');
+  return s.speaker ? title.split('|').slice(0, -1).join('|').trim() || title : title;
 }
 
 /** Speakers with at least two videos, most frequent first. */

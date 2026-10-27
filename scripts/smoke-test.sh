@@ -37,6 +37,8 @@ open_link "nur:///learn/prayer"
 shot learn 5
 adb shell input swipe 540 1700 540 500 400
 shot learn-scrolled 3
+open_link "nur:///city"
+shot city 4
 open_link "nur:///learn/wudu"
 shot learn-wudu 5
 

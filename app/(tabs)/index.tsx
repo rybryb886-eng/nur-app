@@ -46,16 +46,19 @@ function countdown(ms: number) {
 
 export default function PrayerScreen() {
   const t = useT();
-  const { settings } = useSettings();
+  const { settings, timesVersion } = useSettings();
   const { place, method, hanafi, lang } = settings;
   const now = useNow(1000);
   const minute = Math.floor(now.getTime() / 60_000);
 
   const times = useMemo(
     () => computeTimes(place, method, hanafi, new Date()),
-    [place, method, hanafi, minute],
+    [place, method, hanafi, minute, timesVersion],
   );
-  const next = useMemo(() => nextPrayer(place, method, hanafi, new Date()), [place, method, hanafi, minute]);
+  const next = useMemo(
+    () => nextPrayer(place, method, hanafi, new Date()),
+    [place, method, hanafi, minute, timesVersion],
+  );
   const current = currentPrayer(times, now);
   const prev = useMemo(() => {
     const passed = PRAYERS.filter((k) => k !== 'sunrise' && times[k] <= now).map((k) => times[k]);

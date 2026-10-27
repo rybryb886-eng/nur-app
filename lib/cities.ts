@@ -1,30 +1,29 @@
+import { MUFTYAT_REGIONS, MuftyatCity } from './official';
 import type { Place } from './settings';
 
-// Kazakhstan moved to a single UTC+5 zone in March 2024; the regional IANA zones all reflect that.
-export const CITIES: (Place & { country: string })[] = [
-  { name: 'Астана', country: 'KZ', lat: 51.1694, lon: 71.4491, tz: 'Asia/Aqtobe' },
-  { name: 'Алматы', country: 'KZ', lat: 43.2389, lon: 76.8897, tz: 'Asia/Aqtobe' },
-  { name: 'Шымкент', country: 'KZ', lat: 42.3417, lon: 69.5901, tz: 'Asia/Aqtobe' },
-  { name: 'Қарағанды', country: 'KZ', lat: 49.8047, lon: 73.1094, tz: 'Asia/Aqtobe' },
-  { name: 'Ақтөбе', country: 'KZ', lat: 50.2839, lon: 57.167, tz: 'Asia/Aqtobe' },
-  { name: 'Тараз', country: 'KZ', lat: 42.9, lon: 71.3667, tz: 'Asia/Aqtobe' },
-  { name: 'Павлодар', country: 'KZ', lat: 52.2873, lon: 76.9674, tz: 'Asia/Aqtobe' },
-  { name: 'Өскемен', country: 'KZ', lat: 49.9483, lon: 82.6279, tz: 'Asia/Aqtobe' },
-  { name: 'Семей', country: 'KZ', lat: 50.4111, lon: 80.2275, tz: 'Asia/Aqtobe' },
-  { name: 'Атырау', country: 'KZ', lat: 47.1167, lon: 51.8833, tz: 'Asia/Atyrau' },
-  { name: 'Қостанай', country: 'KZ', lat: 53.2144, lon: 63.6246, tz: 'Asia/Aqtobe' },
-  { name: 'Қызылорда', country: 'KZ', lat: 44.8528, lon: 65.5092, tz: 'Asia/Qyzylorda' },
-  { name: 'Орал', country: 'KZ', lat: 51.2333, lon: 51.3667, tz: 'Asia/Oral' },
-  { name: 'Петропавл', country: 'KZ', lat: 54.8753, lon: 69.1628, tz: 'Asia/Aqtobe' },
-  { name: 'Ақтау', country: 'KZ', lat: 43.65, lon: 51.1667, tz: 'Asia/Aqtau' },
-  { name: 'Түркістан', country: 'KZ', lat: 43.2973, lon: 68.2518, tz: 'Asia/Aqtobe' },
-  { name: 'Талдықорған', country: 'KZ', lat: 45.0156, lon: 78.3739, tz: 'Asia/Aqtobe' },
-  { name: 'Көкшетау', country: 'KZ', lat: 53.2833, lon: 69.4, tz: 'Asia/Aqtobe' },
-  { name: 'Конаев', country: 'KZ', lat: 43.8667, lon: 77.0667, tz: 'Asia/Aqtobe' },
-  { name: 'Жезқазған', country: 'KZ', lat: 47.7833, lon: 67.7667, tz: 'Asia/Aqtobe' },
-  { name: 'Екібастұз', country: 'KZ', lat: 51.7298, lon: 75.3266, tz: 'Asia/Aqtobe' },
-  { name: 'Теміртау', country: 'KZ', lat: 50.0549, lon: 72.9646, tz: 'Asia/Aqtobe' },
-  { name: 'Жаңаөзен', country: 'KZ', lat: 43.3412, lon: 52.8619, tz: 'Asia/Aqtau' },
+/** Display name of a Muftyat city: "Астана қаласы" → "Астана". */
+export const cityName = (name: string) => name.replace(/ қаласы$/, '');
+
+export function muftyatPlace(c: MuftyatCity): Place {
+  // Kazakhstan has been on UTC+5 since March 2024; Asia/Aqtobe gives that on phones with old zone data.
+  return {
+    name: cityName(c.name),
+    lat: c.lat,
+    lon: c.lon,
+    tz: 'Asia/Aqtobe',
+    muftyatId: c.id,
+    country: 'KZ',
+  };
+}
+
+/** Cities of Kazakhstan exactly as namaz.muftyat.kz lists them, by region. */
+export const KZ_SECTIONS = MUFTYAT_REGIONS.map((r) => ({
+  title: r.region,
+  data: r.cities.map(muftyatPlace),
+}));
+
+/** A few cities abroad, calculated with the chosen method. */
+export const ABROAD: (Place & { country: string })[] = [
   { name: 'Бішкек', country: 'KG', lat: 42.8746, lon: 74.5698, tz: 'Asia/Bishkek' },
   { name: 'Ташкент', country: 'UZ', lat: 41.2995, lon: 69.2401, tz: 'Asia/Tashkent' },
   { name: 'Самарқанд', country: 'UZ', lat: 39.6542, lon: 66.9597, tz: 'Asia/Samarkand' },

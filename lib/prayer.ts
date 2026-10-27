@@ -1,12 +1,6 @@
-import {
-  CalculationMethod,
-  Coordinates,
-  HighLatitudeRule,
-  Madhab,
-  PrayerTimes,
-  Qibla,
-} from 'adhan';
+import { CalculationMethod, Coordinates, HighLatitudeRule, Madhab, PrayerTimes, Qibla } from 'adhan';
 
+import { isOfficialPlace, officialTimes } from './official';
 import type { MethodId, Place } from './settings';
 
 export const PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
@@ -57,13 +51,24 @@ function localDate(at: Date, tz?: string) {
   return new Date(get('year'), get('month') - 1, get('day'));
 }
 
-export function computeTimes(place: Place, method: MethodId, hanafi: boolean, at = new Date(), dayOffset = 0) {
+export function computeTimes(
+  place: Place,
+  method: MethodId,
+  hanafi: boolean,
+  at = new Date(),
+  dayOffset = 0,
+) {
+  const day = localDate(at, place.tz);
+  day.setDate(day.getDate() + dayOffset);
+  // In Kazakhstan the Muftyat's own timetable wins over our calculation, when it is on the phone.
+  if (method === 'Kazakhstan' && hanafi && isOfficialPlace(place)) {
+    const official = officialTimes(place, day.getFullYear(), day.getMonth(), day.getDate());
+    if (official) return official;
+  }
   const coords = new Coordinates(place.lat, place.lon);
   const params = methodParams(method);
   params.madhab = hanafi ? Madhab.Hanafi : Madhab.Shafi;
   params.highLatitudeRule = HighLatitudeRule.recommended(coords);
-  const day = localDate(at, place.tz);
-  day.setDate(day.getDate() + dayOffset);
   const pt = new PrayerTimes(coords, day, params);
   return {
     fajr: pt.fajr,
@@ -119,14 +124,39 @@ export function distanceToMeccaKm(place: Pick<Place, 'lat' | 'lon'>) {
   const dLat = (KAABA.lat - place.lat) * rad;
   const dLon = (KAABA.lon - place.lon) * rad;
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(place.lat * rad) * Math.cos(KAABA.lat * rad) * Math.sin(dLon / 2) ** 2;
+    Math.sin(dLat / 2) ** 2 + Math.cos(place.lat * rad) * Math.cos(KAABA.lat * rad) * Math.sin(dLon / 2) ** 2;
   return Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
 const MONTHS = {
-  kk: ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым', 'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан'],
-  ru: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
+  kk: [
+    'қаңтар',
+    'ақпан',
+    'наурыз',
+    'сәуір',
+    'мамыр',
+    'маусым',
+    'шілде',
+    'тамыз',
+    'қыркүйек',
+    'қазан',
+    'қараша',
+    'желтоқсан',
+  ],
+  ru: [
+    'января',
+    'февраля',
+    'марта',
+    'апреля',
+    'мая',
+    'июня',
+    'июля',
+    'августа',
+    'сентября',
+    'октября',
+    'ноября',
+    'декабря',
+  ],
 };
 const WEEKDAYS = {
   kk: ['Жексенбі', 'Дүйсенбі', 'Сейсенбі', 'Сәрсенбі', 'Бейсенбі', 'Жұма', 'Сенбі'],
@@ -140,8 +170,34 @@ export function gregorianDate(at: Date, lang: 'kk' | 'ru', tz?: string) {
 }
 
 const HIJRI_MONTHS = {
-  kk: ['Мұхаррам', 'Сафар', 'Рабиғул-әууәл', 'Рабиғус-сәни', 'Жұмәдәл-ула', 'Жұмәдәс-сәни', 'Ражаб', 'Шағбан', 'Рамазан', 'Шәууәл', 'Зұл-қағда', 'Зұл-хижжа'],
-  ru: ['Мухаррам', 'Сафар', 'Раби аль-авваль', 'Раби ас-сани', 'Джумада аль-уля', 'Джумада ас-сани', 'Раджаб', 'Шабан', 'Рамадан', 'Шавваль', 'Зуль-када', 'Зуль-хиджа'],
+  kk: [
+    'Мұхаррам',
+    'Сафар',
+    'Рабиғул-әууәл',
+    'Рабиғус-сәни',
+    'Жұмәдәл-ула',
+    'Жұмәдәс-сәни',
+    'Ражаб',
+    'Шағбан',
+    'Рамазан',
+    'Шәууәл',
+    'Зұл-қағда',
+    'Зұл-хижжа',
+  ],
+  ru: [
+    'Мухаррам',
+    'Сафар',
+    'Раби аль-авваль',
+    'Раби ас-сани',
+    'Джумада аль-уля',
+    'Джумада ас-сани',
+    'Раджаб',
+    'Шабан',
+    'Рамадан',
+    'Шавваль',
+    'Зуль-када',
+    'Зуль-хиджа',
+  ],
 };
 
 // The tabular calendar ran one day behind the date muftyat.kz announced (26 Oct 2026 = 15 Jumada al-Ula 1448).

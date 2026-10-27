@@ -83,7 +83,7 @@ async function reschedule(settings: Settings) {
  * keeps the scheduled reminders in sync with the settings. Renders nothing.
  */
 export function NotificationScheduler() {
-  const { settings, update } = useSettings();
+  const { settings, update, timesVersion } = useSettings();
 
   useEffect(() => {
     if (Platform.OS === 'web' || settings.notifAsked) return;
@@ -103,6 +103,7 @@ export function NotificationScheduler() {
     settings.method,
     settings.hanafi,
     settings.lang,
+    timesVersion,
   ]);
   return null;
 }

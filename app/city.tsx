@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
 
 import { FONT, Glass, ScreenTitle, Sky, Txt } from '@/components/ui';
-import { CITIES } from '@/lib/cities';
+import { ABROAD, KZ_SECTIONS, muftyatPlace } from '@/lib/cities';
+import { nearestMuftyatCity } from '@/lib/official';
 import { useT } from '@/lib/i18n';
 import { Place, useSettings } from '@/lib/settings';
 import { GLASS } from '@/lib/sky';
@@ -34,13 +35,22 @@ export default function CityScreen() {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude: lat, longitude: lon } = pos.coords;
       let name = t('myLocation');
+      let country: string | undefined;
       try {
         const [addr] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
         name = addr?.city || addr?.subregion || addr?.region || name;
+        country = addr?.isoCountryCode ?? undefined;
       } catch {
         // Reverse geocoding is best-effort (unsupported on web).
       }
-      choose({ name, lat, lon });
+      if (country === 'KZ') {
+        // In a Muftyat city its own timetable fits exactly; elsewhere in Kazakhstan the Muftyat's
+        // timetable for these very coordinates is downloaded (lib/official.ts).
+        const { city, km } = nearestMuftyatCity({ lat, lon });
+        choose(km < 15 ? muftyatPlace(city) : { name, lat, lon, tz: 'Asia/Aqtobe', country });
+      } else {
+        choose({ name, lat, lon, country });
+      }
     } catch {
       setError(t('locationDenied'));
     } finally {
@@ -49,7 +59,9 @@ export default function CityScreen() {
   };
 
   const q = query.trim().toLowerCase();
-  const list = q ? CITIES.filter((c) => c.name.toLowerCase().includes(q)) : CITIES;
+  const sections = [...KZ_SECTIONS, { title: t('abroad'), data: ABROAD as Place[] }]
+    .map((sec) => ({ ...sec, data: q ? sec.data.filter((c) => c.name.toLowerCase().includes(q)) : sec.data }))
+    .filter((sec) => sec.data.length > 0);
 
   return (
     <Sky>
@@ -80,21 +92,34 @@ export default function CityScreen() {
           />
         </View>
       </View>
-      <FlatList
-        data={list}
-        keyExtractor={(c) => c.name}
+      <SectionList
+        sections={sections}
+        keyExtractor={(c) => `${c.muftyatId ?? c.name}`}
         contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
+        stickySectionHeadersEnabled={false}
+        keyboardShouldPersistTaps="handled"
+        renderSectionHeader={({ section }) => (
+          <Txt dim size={13} weight="semibold" style={styles.section}>
+            {section.title}
+          </Txt>
+        )}
         renderItem={({ item }) => {
-          const selected = item.name === settings.place.name;
+          const selected = item.muftyatId
+            ? item.muftyatId === settings.place.muftyatId
+            : item.name === settings.place.name;
           return (
             <Pressable onPress={() => choose(item)} style={styles.row}>
               <Txt size={17} weight={selected ? 'semibold' : 'regular'} style={{ flex: 1 }}>
                 {item.name}
               </Txt>
-              <Txt faint size={13}>
-                {item.country}
-              </Txt>
-              {selected && <Ionicons name="checkmark" size={20} color={GLASS.success} style={{ marginLeft: 10 }} />}
+              {item.country !== 'KZ' && (
+                <Txt faint size={13}>
+                  {item.country}
+                </Txt>
+              )}
+              {selected && (
+                <Ionicons name="checkmark" size={20} color={GLASS.success} style={{ marginLeft: 10 }} />
+              )}
             </Pressable>
           );
         }}
@@ -114,6 +139,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   input: { flex: 1, color: '#fff', fontFamily: FONT.regular, fontSize: 16, paddingVertical: 12 },
+  section: { marginTop: 18, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

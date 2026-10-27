@@ -1,6 +1,6 @@
 name: Fetch data
 
-# Data that only the open internet has (word timings for the Quran recitation, sermon lists).
+# Data that only the open internet has (Quran word timings, sermon list, Muftyat cities and timetables).
 # Runs the scripts in scripts/fetch and commits what they write back to the branch.
 on:
   push:
@@ -16,7 +16,7 @@ permissions:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

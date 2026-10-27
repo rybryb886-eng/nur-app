@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 import type { Lang } from './i18n';
+import { ensureOfficial, nearestMuftyatCity } from './official';
 
 export type Place = {
   name: string;
@@ -9,6 +10,10 @@ export type Place = {
   lon: number;
   /** IANA time zone; undefined means the device time zone (GPS location). */
   tz?: string;
+  /** City id on namaz.muftyat.kz; its official timetable is used (see lib/official.ts). */
+  muftyatId?: number;
+  /** ISO country code, when known. */
+  country?: string;
 };
 
 export type MethodId =
@@ -46,7 +51,7 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   lang: 'kk',
-  place: { name: 'Астана', lat: 51.1694, lon: 71.4491, tz: 'Asia/Aqtobe' },
+  place: { name: 'Астана', lat: 51.133333, lon: 71.433333, tz: 'Asia/Aqtobe', muftyatId: 3, country: 'KZ' },
   method: 'Kazakhstan',
   hanafi: true,
   quranTranslation: 'kk',
@@ -66,10 +71,23 @@ const KEY = 'nur.settings.v1';
  * right local time on every phone.
  */
 const STALE_TZ = new Set(['Asia/Almaty', 'Asia/Qostanay']);
+const KZ_ZONES = new Set([
+  'Asia/Aqtobe',
+  'Asia/Atyrau',
+  'Asia/Oral',
+  'Asia/Aqtau',
+  'Asia/Qyzylorda',
+  ...STALE_TZ,
+]);
 
 function parse(raw: string): Settings {
   const s: Settings = { ...DEFAULTS, ...JSON.parse(raw) };
   if (s.place.tz && STALE_TZ.has(s.place.tz)) s.place = { ...s.place, tz: 'Asia/Aqtobe' };
+  // Cities picked before the Muftyat list existed: move them onto the matching Muftyat city.
+  if (!s.place.muftyatId && s.place.tz && KZ_ZONES.has(s.place.tz)) {
+    const { city, km } = nearestMuftyatCity(s.place);
+    if (km < 25) s.place = { ...s.place, lat: city.lat, lon: city.lon, muftyatId: city.id, country: 'KZ' };
+  }
   return s;
 }
 
@@ -86,13 +104,21 @@ type Ctx = {
   settings: Settings;
   ready: boolean;
   update: (patch: Partial<Settings>) => void;
+  /** Bumped when an official timetable arrives, so prayer times get recomputed. */
+  timesVersion: number;
 };
 
-const SettingsContext = createContext<Ctx>({ settings: DEFAULTS, ready: false, update: () => {} });
+const SettingsContext = createContext<Ctx>({
+  settings: DEFAULTS,
+  ready: false,
+  update: () => {},
+  timesVersion: 0,
+});
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [ready, setReady] = useState(false);
+  const [timesVersion, setTimesVersion] = useState(0);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY)
@@ -111,7 +137,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  return <SettingsContext.Provider value={{ settings, ready, update }}>{children}</SettingsContext.Provider>;
+  useEffect(() => {
+    if (!ready) return;
+    ensureOfficial(settings.place)
+      .then((changed) => changed && setTimesVersion((v) => v + 1))
+      .catch(() => {});
+  }, [ready, settings.place]);
+
+  return (
+    <SettingsContext.Provider value={{ settings, ready, update, timesVersion }}>
+      {children}
+    </SettingsContext.Provider>
+  );
 }
 
 export function useSettings() {
