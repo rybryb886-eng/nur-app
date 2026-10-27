@@ -27,7 +27,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           [ -e scripts/fetch/discover.py ] || exit 0
-          sudo apt-get install -y poppler-utils >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null || true
           python3 scripts/fetch/discover.py || true
           gh release view research >/dev/null 2>&1 || gh release create research --prerelease --title research --notes "Source texts"
           gh release upload research research/* --clobber || true

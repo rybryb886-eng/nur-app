@@ -24,9 +24,8 @@ for book in ["28698", "28705", "28692", "28697"]:
         page = get(f"/kk/book/{book}/")
         pdf = re.search(r'href="(/media/[^"]+\.pdf)"', page, re.I).group(1)
         open(f"research/book-{book}.pdf", "wb").write(get(pdf, raw=True))
-        subprocess.run(["pdftotext", "-layout", f"research/book-{book}.pdf", f"research/book-{book}.txt"], check=True)
-        os.remove(f"research/book-{book}.pdf")
-        print("book", book, os.path.getsize(f"research/book-{book}.txt"))
+        subprocess.run(["pdftotext", "-layout", f"research/book-{book}.pdf", f"research/book-{book}.txt"])
+        print("book", book, os.path.getsize(f"research/book-{book}.pdf"))
     except Exception as e:
         print("book failed", book, e)
 
