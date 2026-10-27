@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: |
           python3 scripts/fetch/fetch-muftyat-cities.py
-          curl -sS -m 30 -A 'Mozilla/5.0' "https://api.muftyat.kz/prayer-times/2026/42.368009/69.612769" -o assets/probe-shymkent.json
+          python3 scripts/fetch/fetch-muftyat-times.py
           git add assets
           git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -m "probe data"
           git push
