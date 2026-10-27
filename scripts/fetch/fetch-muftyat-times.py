@@ -12,28 +12,42 @@ KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"]
 regions = json.load(open("assets/muftyat-cities.json"))
 os.makedirs("assets/muftyat", exist_ok=True)
 this_year = datetime.date.today().year
+
+
+def fetch(city, year):
+    url = f"https://api.muftyat.kz/prayer-times/{year}/{city['lat']}/{city['lon']}"
+    for attempt in range(4):
+        try:
+            days = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))["result"]
+            days.sort(key=lambda d: d["Date"])
+            return "".join(d[k].replace(":", "") for d in days for k in KEYS)
+        except Exception as e:
+            print("retry", city["name"], year, e)
+            time.sleep(5 + attempt * 10)
+    return None
+
+
+cities = [c for r in regions for c in r["cities"]]
 for year in (this_year, this_year + 1):
-    out, failed = {}, []
-    for city in (c for r in regions for c in r["cities"]):
-        url = f"https://api.muftyat.kz/prayer-times/{year}/{city['lat']}/{city['lon']}"
-        for attempt in range(3):
-            try:
-                days = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=40))["result"]
-                break
-            except Exception as e:
-                days = None
-                time.sleep(2 + attempt * 3)
-        if not days:
-            failed.append(city["name"])
-            continue
-        days.sort(key=lambda d: d["Date"])
-        out[city["id"]] = "".join(d[k].replace(":", "") for d in days for k in KEYS)
-        time.sleep(0.3)
-    print(year, len(out), "cities, failed:", failed)
-    if len(out) < len(failed) * 4:
-        raise SystemExit(f"Too many failures for {year}; keeping the previous timetables")
+    out, todo = {}, cities
+    for _ in range(3):  # the API drops some requests under load; go over the failed ones again
+        failed = []
+        for city in todo:
+            table = fetch(city, year)
+            if table:
+                out[str(city["id"])] = table
+            else:
+                failed.append(city)
+            time.sleep(0.5)
+        todo = failed
+        if not todo:
+            break
+        time.sleep(30)
+    print(year, len(out), "cities, failed:", [c["name"] for c in todo])
+    if not out:
+        raise SystemExit(f"Nothing fetched for {year}; keeping the previous timetables")
     path = f"assets/muftyat/times-{year}.json"
     if os.path.exists(path):
         # Keep a city's previous timetable when only its request failed this time.
-        out = {**json.load(open(path)), **{str(k): v for k, v in out.items()}}
+        out = {**json.load(open(path)), **out}
     json.dump(out, open(path, "w"), separators=(",", ":"))
