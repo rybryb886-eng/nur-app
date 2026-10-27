@@ -18,6 +18,11 @@ try:
 
     def walk(o):
         if isinstance(o, dict):
+            if "lockupViewModel" in o:
+                v = o["lockupViewModel"]
+                md = v.get("metadata", {}).get("lockupMetadataViewModel", {})
+                rows.append((v.get("contentId"), md.get("title", {}).get("content"),
+                             json.dumps(md.get("metadata", {}), ensure_ascii=False)[:300], ""))
             if "playlistVideoRenderer" in o:
                 v = o["playlistVideoRenderer"]
                 rows.append((v.get("videoId"), "".join(r.get("text", "") for r in v["title"].get("runs", [])),
@@ -38,15 +43,14 @@ try:
 except Exception as e:
     print("playlist failed", e)
 
-for url in ["https://muftyat.kz/sitemap.xml", "https://muftyat.kz/kk/", "https://muftyat.kz/ru/"]:
+for url in ["https://muftyat.kz/kk/books/", "https://muftyat.kz/kk/dini-senim/", "https://muftyat.kz/kk/search/?q=%D0%BD%D0%B0%D0%BC%D0%B0%D0%B7",
+            "https://muftyat.kz/ru/search/?q=%D0%BD%D0%B0%D0%BC%D0%B0%D0%B7"]:
     try:
         page = get(url)
-        links = sorted(set(re.findall(r'https?://muftyat\.kz/[^"\'<> ]+|href="(/[^"]+)"', page)))
         print("URL", url, len(page))
-        for l in links:
-            l = l if isinstance(l, str) else "".join(l)
-            if re.search(r"namaz|daret|dәret|gusyl|ghusl|ğusyl|tahar|wudu|abdest|oqu|kitap|book|ilim|knowledge|fiqh|fiqh|faq|sura|abc|beginner|jana", l, re.I):
-                print("  ", l)
-        print("  sample:", [l for l in links][:60])
+        for href, text in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', page, re.S):
+            t = re.sub(r"<[^>]+>|\s+", " ", text).strip()
+            if t and not href.startswith("#"):
+                print("  ", href, "|", t[:90])
     except Exception as e:
         print("failed", url, e)

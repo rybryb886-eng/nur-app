@@ -23,5 +23,7 @@ for ch in channels:
         items.append({"id": vid, "title": title, "channel": ch["id"], "published": published})
     print(ch["name"], "ok")
     time.sleep(1)
+if not items:
+    raise SystemExit("No videos fetched; keeping the previous list")
 json.dump(items, open("assets/sermons.json", "w"), ensure_ascii=False, indent=0)
 print(len(items), "videos")
