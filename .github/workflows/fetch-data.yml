@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Discover
+        run: '[ -e scripts/fetch/discover.py ] && python3 scripts/fetch/discover.py || true'
       - name: Fetch
         run: |
           for f in scripts/fetch/fetch-*.py; do [ -e "$f" ] && python3 "$f"; done
