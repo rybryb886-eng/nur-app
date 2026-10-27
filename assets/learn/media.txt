@@ -20,3 +20,5 @@ w-feet.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1
 d-ruku3.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005732_08d6c67f-4baf-4af3-b948-eb739a7a8095.png
 w-head2.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005733_b0eb243a-7865-43e8-a65c-cc78362f182e.png
 v-sample.mp4 https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_005809_321631a9-2eb5-4641-b6aa-3f79176a5adf.mp4
+d-takbir2.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_010948_1eed2762-393f-4f27-8f78-95ffea632392.png
+d-salam3.png https://d8j0ntlcm91z4.cloudfront.net/user_3JjuBg9jn6UqEfZurgW3SOBNWU1/hf_20261027_010948_cb7b59b6-ccdb-4dc0-9bbb-efad6085598b.png
