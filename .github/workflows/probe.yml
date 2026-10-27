@@ -2,18 +2,16 @@ name: Probe
 on:
   push:
     branches: [probe]
+permissions:
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - run: |
-          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
-          for u in \
-            "https://api.muftyat.kz/cities/?format=json" \
-            "https://api.muftyat.kz/cities/?format=json&page=2" \
-            "https://api.muftyat.kz/prayer-times/2026/51.133333/71.433333" \
-            "https://namaz.muftyat.kz/kk/" ; do
-            echo "===== $u"
-            curl -sS -m 30 -A "$UA" -w '\nHTTP %{http_code}\n' "$u" | head -c 3000
-            echo
-          done
+          python3 scripts/fetch/fetch-muftyat-cities.py
+          curl -sS -m 30 -A 'Mozilla/5.0' "https://api.muftyat.kz/prayer-times/2026/42.368009/69.612769" -o assets/probe-shymkent.json
+          git add assets
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -m "probe data"
+          git push
