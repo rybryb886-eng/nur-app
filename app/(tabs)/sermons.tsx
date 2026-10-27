@@ -16,33 +16,21 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Chip, Glass, PressScale, ScreenTitle, Sky, Txt } from '@/components/ui';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { useT } from '@/lib/i18n';
-import { channelOf, CHANNELS, Sermon, thumbnail, useSermons, watchUrl } from '@/lib/sermons';
-import { useSettings } from '@/lib/settings';
+import { Sermon, shortTitle, speakers, thumbnail, useSermons, watchUrl } from '@/lib/sermons';
 import { GLASS } from '@/lib/sky';
-
-function shortDate(iso: string, lang: 'kk' | 'ru') {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return lang === 'ru' || lang === 'kk'
-    ? `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
-    : '';
-}
 
 export default function SermonsScreen() {
   const t = useT();
-  const { settings } = useSettings();
   const { items, offline, loading, refresh } = useSermons();
-  const [lang, setLang] = useState<'kk' | 'ru'>(settings.lang);
-  const [channel, setChannel] = useState<string | null>(null);
+  const [lang, setLang] = useState<'kk' | 'ru'>('kk');
+  const [speaker, setSpeaker] = useState<string | null>(null);
   const [current, setCurrent] = useState<Sermon | null>(null);
   const [blocked, setBlocked] = useState(false);
 
-  const channels = CHANNELS.filter((c) => c.lang === lang);
-  const list = useMemo(
-    () => items.filter((s) => (channel ? s.channel === channel : channels.some((c) => c.id === s.channel))),
-    [items, channel, lang],
-  );
+  const hasRussian = items.some((s) => s.lang === 'ru');
+  const inLang = useMemo(() => items.filter((s) => !hasRussian || s.lang === lang), [items, lang]);
+  const names = useMemo(() => speakers(inLang), [inLang]);
+  const list = speaker ? inLang.filter((s) => s.speaker === speaker) : inLang;
 
   const play = (s: Sermon) => {
     setBlocked(false);
@@ -56,24 +44,28 @@ export default function SermonsScreen() {
   };
   const share = (s: Sermon) =>
     Share.share({
-      message: `${t('shareSermon')}: «${s.title}» — ${channelOf(s)?.name ?? ''}\n${watchUrl(s.id)}`,
+      message: `${t('shareSermon')}: «${s.title}»\n${watchUrl(s.id)}`,
     });
 
   return (
     <Sky>
       <ScreenTitle>{t('sermonsTitle')}</ScreenTitle>
-      <View style={styles.chips}>
-        <Chip label="Қазақша" active={lang === 'kk'} onPress={() => (setLang('kk'), setChannel(null))} />
-        <Chip label="Русский" active={lang === 'ru'} onPress={() => (setLang('ru'), setChannel(null))} />
-      </View>
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.speakers}>
-          <Chip label={t('all')} active={!channel} onPress={() => setChannel(null)} />
-          {channels.map((c) => (
-            <Chip key={c.id} label={c.name} active={channel === c.id} onPress={() => setChannel(c.id)} />
-          ))}
-        </ScrollView>
-      </View>
+      {hasRussian && (
+        <View style={styles.chips}>
+          <Chip label="Қазақша" active={lang === 'kk'} onPress={() => (setLang('kk'), setSpeaker(null))} />
+          <Chip label="Русский" active={lang === 'ru'} onPress={() => (setLang('ru'), setSpeaker(null))} />
+        </View>
+      )}
+      {names.length > 0 && (
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.speakers}>
+            <Chip label={t('all')} active={!speaker} onPress={() => setSpeaker(null)} />
+            {names.map((name) => (
+              <Chip key={name} label={name} active={speaker === name} onPress={() => setSpeaker(name)} />
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {current && (
         <Animated.View entering={FadeIn.duration(400)} style={styles.player}>
@@ -90,11 +82,13 @@ export default function SermonsScreen() {
           <View style={styles.playerInfo}>
             <View style={{ flex: 1 }}>
               <Txt size={15} weight="semibold" numberOfLines={2}>
-                {current.title}
+                {shortTitle(current)}
               </Txt>
-              <Txt dim size={12}>
-                {channelOf(current)?.name}
-              </Txt>
+              {!!current.speaker && (
+                <Txt dim size={12}>
+                  {current.speaker}
+                </Txt>
+              )}
             </View>
             <PressScale hitSlop={8} onPress={() => step(-1)}>
               <Ionicons name="play-skip-back" size={22} color="#fff" />
@@ -154,11 +148,13 @@ export default function SermonsScreen() {
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Txt size={14} weight="semibold" numberOfLines={3}>
-                    {item.title}
+                    {shortTitle(item)}
                   </Txt>
-                  <Txt dim size={12} numberOfLines={1}>
-                    {channelOf(item)?.name} · {shortDate(item.published, settings.lang)}
-                  </Txt>
+                  {!!item.speaker && (
+                    <Txt dim size={12} numberOfLines={1}>
+                      {item.speaker}
+                    </Txt>
+                  )}
                 </View>
                 <Pressable hitSlop={10} onPress={() => share(item)}>
                   <Ionicons name="share-social-outline" size={20} color={GLASS.textDim} />

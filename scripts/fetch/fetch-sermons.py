@@ -28,7 +28,8 @@ def walk(o):
             if v.get("contentType") == "LOCKUP_CONTENT_TYPE_VIDEO" and title:
                 items.append({"id": v["contentId"], "title": title})
         if "continuationCommand" in o:
-            tokens.append(o["continuationCommand"]["token"])
+            if o["continuationCommand"].get("token"):
+                tokens.append(o["continuationCommand"]["token"])
         for x in o.values():
             walk(x)
     elif isinstance(o, list):
