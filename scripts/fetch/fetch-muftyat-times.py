@@ -16,7 +16,8 @@ this_year = datetime.date.today().year
 
 
 def fetch(city, year):
-    url = f"https://api.muftyat.kz/prayer-times/{year}/{city['lat']}/{city['lon']}"
+    # The API matches the site's coordinates as written there, always with 6 decimals ("52.832000").
+    url = f"https://api.muftyat.kz/prayer-times/{year}/{city['lat']:.6f}/{city['lon']:.6f}"
     for attempt in range(4):
         try:
             days = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))["result"]

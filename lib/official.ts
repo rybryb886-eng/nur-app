@@ -84,7 +84,10 @@ export function officialTimes(place: Place, y: number, m: number, d: number) {
 }
 
 async function download(place: Place, year: number) {
-  const res = await fetch(`https://api.muftyat.kz/prayer-times/${year}/${place.lat}/${place.lon}`);
+  // The API matches the coordinates of namaz.muftyat.kz as written there, always with 6 decimals.
+  const res = await fetch(
+    `https://api.muftyat.kz/prayer-times/${year}/${place.lat.toFixed(6)}/${place.lon.toFixed(6)}`,
+  );
   if (!res.ok) throw new Error(String(res.status));
   const { result } = (await res.json()) as { result: (Record<string, string> & { Date: string })[] };
   const days = [...result].sort((a, b) => a.Date.localeCompare(b.Date));
