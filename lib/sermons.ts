@@ -8,7 +8,6 @@ export type Sermon = {
   id: string;
   title: string;
   speaker: string;
-  lang: 'kk' | 'ru';
 };
 
 export const PLAYLIST_URL = 'https://www.youtube.com/playlist?list=PL1OPjpx94Q5_lVFLV1Qp-gGTu-grRZ87Z';

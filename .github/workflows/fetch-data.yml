@@ -22,16 +22,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Discover
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          [ -e scripts/fetch/discover.py ] || exit 0
-          sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null || true
-          python3 scripts/fetch/discover.py || true
-          gh release view research >/dev/null 2>&1 || gh release create research --prerelease --title research --notes "Source texts"
-          gh release upload research research/* --clobber || true
-          rm -rf research
       - name: Fetch
         run: |
           for f in scripts/fetch/fetch-*.py; do [ -e "$f" ] && python3 "$f"; done

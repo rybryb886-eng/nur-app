@@ -52,6 +52,7 @@ const kk = {
 
   loading: 'Жүктелуде…',
   sermonsTitle: 'Уағыздар',
+  source: 'Дереккөз',
   all: 'Барлығы',
   share: 'Бөлісу',
   shareSermon: 'Уағызды тыңдаңыз',
@@ -163,6 +164,7 @@ const ru: Record<StringKey, string> = {
 
   loading: 'Загрузка…',
   sermonsTitle: 'Проповеди',
+  source: 'Источник',
   all: 'Все',
   share: 'Поделиться',
   shareSermon: 'Послушайте проповедь',

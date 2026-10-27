@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { FONT, Glass, Sky, Txt } from '@/components/ui';
 import { useT } from '@/lib/i18n';
-import { GUIDES, Recitation } from '@/lib/learn';
+import { GUIDES, Recitation, SOURCE } from '@/lib/learn';
 import { SURAHS } from '@/lib/quran';
 import { useSettings } from '@/lib/settings';
 import { GLASS } from '@/lib/sky';
@@ -143,12 +143,25 @@ export default function GuideScreen() {
             </Txt>
           </Glass>
         ))}
+
+        <Pressable onPress={() => Linking.openURL(SOURCE.url)} style={styles.source}>
+          <Ionicons name="book-outline" size={16} color={GLASS.textDim} />
+          <View style={{ flex: 1 }}>
+            <Txt dim size={12}>
+              {t('source')}: {SOURCE.title[lang]}
+            </Txt>
+            <Txt faint size={12}>
+              {SOURCE.note[lang]}
+            </Txt>
+          </View>
+        </Pressable>
       </ScrollView>
     </Sky>
   );
 }
 
 const styles = StyleSheet.create({
+  source: { flexDirection: 'row', gap: 8, marginTop: 12, paddingHorizontal: 4 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

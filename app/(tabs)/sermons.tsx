@@ -22,15 +22,12 @@ import { GLASS } from '@/lib/sky';
 export default function SermonsScreen() {
   const t = useT();
   const { items, offline, loading, refresh } = useSermons();
-  const [lang, setLang] = useState<'kk' | 'ru'>('kk');
   const [speaker, setSpeaker] = useState<string | null>(null);
   const [current, setCurrent] = useState<Sermon | null>(null);
   const [blocked, setBlocked] = useState(false);
 
-  const hasRussian = items.some((s) => s.lang === 'ru');
-  const inLang = useMemo(() => items.filter((s) => !hasRussian || s.lang === lang), [items, lang]);
-  const names = useMemo(() => speakers(inLang), [inLang]);
-  const list = speaker ? inLang.filter((s) => s.speaker === speaker) : inLang;
+  const names = useMemo(() => speakers(items), [items]);
+  const list = speaker ? items.filter((s) => s.speaker === speaker) : items;
 
   const play = (s: Sermon) => {
     setBlocked(false);
@@ -50,15 +47,12 @@ export default function SermonsScreen() {
   return (
     <Sky>
       <ScreenTitle>{t('sermonsTitle')}</ScreenTitle>
-      {hasRussian && (
-        <View style={styles.chips}>
-          <Chip label="Қазақша" active={lang === 'kk'} onPress={() => (setLang('kk'), setSpeaker(null))} />
-          <Chip label="Русский" active={lang === 'ru'} onPress={() => (setLang('ru'), setSpeaker(null))} />
-        </View>
-      )}
       {names.length > 0 && (
         <View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.speakers}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.speakers}>
             <Chip label={t('all')} active={!speaker} onPress={() => setSpeaker(null)} />
             {names.map((name) => (
               <Chip key={name} label={name} active={speaker === name} onPress={() => setSpeaker(name)} />
@@ -169,7 +163,6 @@ export default function SermonsScreen() {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 20 },
   speakers: { gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
   player: { paddingHorizontal: 20, marginBottom: 8 },
   playerInfo: {
