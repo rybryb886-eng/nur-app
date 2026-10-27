@@ -11,46 +11,46 @@ def get(url):
     return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=40).read().decode("utf-8", "replace")
 
 
-try:
-    html = get("https://www.youtube.com/playlist?list=PL1OPjpx94Q5_lVFLV1Qp-gGTu-grRZ87Z")
-    data = json.loads(re.search(r"var ytInitialData = (\{.*?\});</script>", html).group(1))
-    rows = []
+html = get("https://www.youtube.com/playlist?list=PL1OPjpx94Q5_lVFLV1Qp-gGTu-grRZ87Z")
+data = json.loads(re.search(r"var ytInitialData = (\{.*?\});</script>", html).group(1))
+rows = []
 
-    def walk(o):
-        if isinstance(o, dict):
-            if "lockupViewModel" in o:
-                v = o["lockupViewModel"]
-                md = v.get("metadata", {}).get("lockupMetadataViewModel", {})
-                rows.append((v.get("contentId"), md.get("title", {}).get("content"),
-                             json.dumps(md.get("metadata", {}), ensure_ascii=False)[:300], ""))
-            if "playlistVideoRenderer" in o:
-                v = o["playlistVideoRenderer"]
-                rows.append((v.get("videoId"), "".join(r.get("text", "") for r in v["title"].get("runs", [])),
-                             "".join(r.get("text", "") for r in v.get("shortBylineText", {}).get("runs", [])),
-                             v.get("lengthText", {}).get("simpleText")))
-            if "playlistHeaderRenderer" in o or "pageHeaderRenderer" in o:
-                print("HEADER", json.dumps(o, ensure_ascii=False)[:600])
-            for x in o.values():
-                walk(x)
-        elif isinstance(o, list):
-            for x in o:
-                walk(x)
 
-    walk(data)
-    print("PLAYLIST", len(rows))
-    for r in rows:
-        print(" | ".join(str(x) for x in r))
-except Exception as e:
-    print("playlist failed", e)
+def walk(o):
+    if isinstance(o, dict):
+        if "lockupViewModel" in o:
+            v = o["lockupViewModel"]
+            md = v.get("metadata", {}).get("lockupMetadataViewModel", {})
+            parts = []
+            for row in md.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", []):
+                for p in row.get("metadataParts", []):
+                    parts.append(p.get("text", {}).get("content", ""))
+            rows.append((v.get("contentId"), v.get("contentType"), md.get("title", {}).get("content"), " / ".join(parts)))
+        if "continuationCommand" in o:
+            print("CONTINUATION present")
+        for x in o.values():
+            walk(x)
+    elif isinstance(o, list):
+        for x in o:
+            walk(x)
 
-for url in ["https://muftyat.kz/kk/books/", "https://muftyat.kz/kk/dini-senim/", "https://muftyat.kz/kk/search/?q=%D0%BD%D0%B0%D0%BC%D0%B0%D0%B7",
-            "https://muftyat.kz/ru/search/?q=%D0%BD%D0%B0%D0%BC%D0%B0%D0%B7"]:
+
+walk(data)
+print("PLAYLIST", len(rows))
+for r in rows[:120]:
+    print("PL", " | ".join(str(x) for x in r))
+
+books = []
+for page in range(1, 9):
     try:
-        page = get(url)
-        print("URL", url, len(page))
-        for href, text in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', page, re.S):
+        p = get(f"https://muftyat.kz/kk/books/?page={page}&lang=all&expertise=1")
+        for href, text in re.findall(r'<a[^>]+href="(/kk/book/\d+/)"[^>]*>(.*?)</a>', p, re.S):
             t = re.sub(r"<[^>]+>|\s+", " ", text).strip()
-            if t and not href.startswith("#"):
-                print("  ", href, "|", t[:90])
+            if t and t.lower() not in ("pdf", "flash") and len(t) < 90:
+                books.append((href, t))
     except Exception as e:
-        print("failed", url, e)
+        print("books failed", page, e)
+for b in sorted(set(books)):
+    print("BOOK", b[0], "|", b[1])
+book = get("https://muftyat.kz/kk/book/28705/")
+print("BOOKLINKS", sorted(set(re.findall(r'href="([^"]+\.(?:pdf|PDF)[^"]*)"', book)))[:10])
