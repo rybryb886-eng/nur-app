@@ -13,6 +13,9 @@ import { useSettings } from '@/lib/settings';
 import { GLASS } from '@/lib/sky';
 
 const HIGHLIGHT = '#FFE6B0';
+// Sleep timer steps in minutes; tapping the moon cycles through them and back to off.
+const SLEEP_STEPS = [15, 30, 60];
+const FADE_MS = 30_000;
 
 function formatClock(sec: number) {
   const s = Math.max(0, Math.floor(sec));
@@ -45,8 +48,32 @@ export default function SurahScreen() {
     setAudioModeAsync({
       playsInSilentMode: true,
       shouldPlayInBackground: true,
+      interruptionMode: 'doNotMix',
     }).catch(() => {});
   }, []);
+
+  // Sleep timer. Checked on every status update, which keep coming while audio plays in the background.
+  const [sleepAt, setSleepAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!sleepAt) return;
+    const left = sleepAt - Date.now();
+    setNow(Date.now());
+    if (left <= 0) {
+      player.pause();
+      player.volume = 1;
+      setSleepAt(null);
+    } else {
+      player.volume = Math.min(1, left / FADE_MS);
+    }
+  }, [status.currentTime, sleepAt]);
+  const cycleSleep = () => {
+    const minutes = sleepAt ? Math.round((sleepAt - Date.now()) / 60_000) : 0;
+    const next = SLEEP_STEPS.find((m) => m > minutes);
+    player.volume = 1;
+    setSleepAt(next ? Date.now() + next * 60_000 : null);
+  };
+  const sleepLeft = sleepAt ? Math.max(1, Math.ceil((sleepAt - now) / 60_000)) : 0;
 
   const position: Position | null =
     loaded && status.currentTime > 0 ? locate(timings, status.currentTime * 1000, text.ar) : null;
@@ -57,6 +84,8 @@ export default function SurahScreen() {
       const ms = timings.v[ayah - 1]?.[0] ?? 0;
       if (!loaded) {
         player.replace({ uri: timings.u });
+        // Lock screen controls also keep Android from stopping playback in the background.
+        player.setActiveForLockScreen(true, { title: `${meta.n}. ${meta.name}`, artist: t('reciter') });
         setLoaded(true);
         pendingSeek.current = ms;
       } else {
@@ -65,7 +94,7 @@ export default function SurahScreen() {
       followRef.current = true;
       player.play();
     },
-    [loaded, player, timings],
+    [loaded, player, timings, meta, t],
   );
 
   // A freshly loaded file can only seek once it has loaded.
@@ -214,7 +243,28 @@ export default function SurahScreen() {
                 {status.isBuffering ? t('loading') : t('reciter')}
               </Txt>
             )}
+            {sleepAt !== null && (
+              <Txt size={12} style={{ color: HIGHLIGHT }}>
+                {t('sleepTimer')}: {sleepLeft} {t('sleepIn')}
+              </Txt>
+            )}
           </View>
+          <Pressable
+            onPress={cycleSleep}
+            hitSlop={10}
+            accessibilityLabel={t('sleepTimer')}
+            style={[styles.sleepBtn, sleepAt !== null && styles.sleepOn]}>
+            <Ionicons
+              name={sleepAt ? 'moon' : 'moon-outline'}
+              size={20}
+              color={sleepAt ? '#1D2A63' : '#fff'}
+            />
+            {sleepAt !== null && (
+              <Txt size={10} weight="bold" style={{ color: '#1D2A63' }}>
+                {sleepLeft}
+              </Txt>
+            )}
+          </Pressable>
         </Glass>
       </View>
     </Sky>
@@ -301,6 +351,16 @@ const Ayah = memo(function Ayah({
 });
 
 const styles = StyleSheet.create({
+  sleepBtn: {
+    minWidth: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  sleepOn: { backgroundColor: HIGHLIGHT, borderColor: HIGHLIGHT },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
