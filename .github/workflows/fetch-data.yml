@@ -5,7 +5,9 @@ name: Fetch data
 on:
   push:
     branches: [mvp, main]
-    paths: ['scripts/fetch/**', 'lib/sermonChannels.json']
+    paths: ['scripts/fetch/**']
+  schedule:
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -21,7 +23,15 @@ jobs:
         with:
           python-version: '3.12'
       - name: Discover
-        run: '[ -e scripts/fetch/discover.py ] && python3 scripts/fetch/discover.py || true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -e scripts/fetch/discover.py ] || exit 0
+          sudo apt-get install -y poppler-utils >/dev/null
+          python3 scripts/fetch/discover.py || true
+          gh release view research >/dev/null 2>&1 || gh release create research --prerelease --title research --notes "Source texts"
+          gh release upload research research/* --clobber || true
+          rm -rf research
       - name: Fetch
         run: |
           for f in scripts/fetch/fetch-*.py; do [ -e "$f" ] && python3 "$f"; done

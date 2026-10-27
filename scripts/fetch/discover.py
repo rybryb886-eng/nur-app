@@ -1,56 +1,54 @@
-"""Temporary: shows what the playlist and muftyat.kz offer (CI only)."""
-import json
+"""Temporary: saves muftyat.kz texts on prayer, wudu and ghusl to research/ (CI uploads them)."""
+import os
 import re
+import subprocess
 import urllib.request
 
-UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
-      "Accept-Language": "kk-KZ,kk;q=0.9,ru;q=0.8"}
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
+os.makedirs("research", exist_ok=True)
 
 
-def get(url):
-    return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=40).read().decode("utf-8", "replace")
+def get(url, raw=False):
+    b = urllib.request.urlopen(urllib.request.Request("https://muftyat.kz" + url, headers=UA), timeout=60).read()
+    return b if raw else b.decode("utf-8", "replace")
 
 
-html = get("https://www.youtube.com/playlist?list=PL1OPjpx94Q5_lVFLV1Qp-gGTu-grRZ87Z")
-data = json.loads(re.search(r"var ytInitialData = (\{.*?\});</script>", html).group(1))
-rows = []
+def text(html):
+    html = re.sub(r"<(script|style)[\s\S]*?</\1>", "", html)
+    html = re.sub(r"<br\s*/?>|</p>|</h\d>|</li>|</div>", "\n", html)
+    return re.sub(r"\n\s*\n+", "\n\n", re.sub(r"<[^>]+>", "", html)).strip()
 
 
-def walk(o):
-    if isinstance(o, dict):
-        if "lockupViewModel" in o:
-            v = o["lockupViewModel"]
-            md = v.get("metadata", {}).get("lockupMetadataViewModel", {})
-            parts = []
-            for row in md.get("metadata", {}).get("contentMetadataViewModel", {}).get("metadataRows", []):
-                for p in row.get("metadataParts", []):
-                    parts.append(p.get("text", {}).get("content", ""))
-            rows.append((v.get("contentId"), v.get("contentType"), md.get("title", {}).get("content"), " / ".join(parts)))
-        if "continuationCommand" in o:
-            print("CONTINUATION present")
-        for x in o.values():
-            walk(x)
-    elif isinstance(o, list):
-        for x in o:
-            walk(x)
-
-
-walk(data)
-print("PLAYLIST", len(rows))
-for r in rows[:120]:
-    print("PL", " | ".join(str(x) for x in r))
-
-books = []
-for page in range(1, 9):
+for book in ["28698", "28705", "28692", "28697"]:
     try:
-        p = get(f"https://muftyat.kz/kk/books/?page={page}&lang=all&expertise=1")
-        for href, text in re.findall(r'<a[^>]+href="(/kk/book/\d+/)"[^>]*>(.*?)</a>', p, re.S):
-            t = re.sub(r"<[^>]+>|\s+", " ", text).strip()
-            if t and t.lower() not in ("pdf", "flash") and len(t) < 90:
-                books.append((href, t))
+        page = get(f"/kk/book/{book}/")
+        pdf = re.search(r'href="(/media/[^"]+\.pdf)"', page, re.I).group(1)
+        open(f"research/book-{book}.pdf", "wb").write(get(pdf, raw=True))
+        subprocess.run(["pdftotext", "-layout", f"research/book-{book}.pdf", f"research/book-{book}.txt"], check=True)
+        os.remove(f"research/book-{book}.pdf")
+        print("book", book, os.path.getsize(f"research/book-{book}.txt"))
     except Exception as e:
-        print("books failed", page, e)
-for b in sorted(set(books)):
-    print("BOOK", b[0], "|", b[1])
-book = get("https://muftyat.kz/kk/book/28705/")
-print("BOOKLINKS", sorted(set(re.findall(r'href="([^"]+\.(?:pdf|PDF)[^"]*)"', book)))[:10])
+        print("book failed", book, e)
+
+qa = get("/kk/qa/")
+cats = sorted(set(re.findall(r'href="(/kk/qa/qa-[a-z-]+/)"', qa)))
+print("QA categories", cats)
+out = open("research/qa.txt", "w")
+for cat in cats:
+    if not re.search(r"namaz|taharat|daret|gusyl|tazal|ibadat", cat):
+        continue
+    for n in range(1, 6):
+        try:
+            listing = get(f"{cat}?page={n}")
+        except Exception:
+            break
+        links = sorted(set(re.findall(r'href="(%s[^"?#]+/)"' % re.escape(cat), listing)))
+        if not links:
+            break
+        for link in links:
+            try:
+                out.write(f"\n\n===== {link}\n" + text(get(link))[:6000])
+            except Exception as e:
+                print("qa failed", link, e)
+out.close()
+print("qa size", os.path.getsize("research/qa.txt"))
