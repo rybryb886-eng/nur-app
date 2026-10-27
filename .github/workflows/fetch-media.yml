@@ -1,0 +1,29 @@
+name: Fetch media
+
+# Generated illustrations live on a CDN the dev sandbox can't reach. Each line of
+# assets/learn/media.txt is "<file name> <url>"; this downloads the missing ones into
+# assets/learn and commits them back.
+on:
+  push:
+    branches: [mvp, main]
+    paths: ['assets/learn/media.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: |
+          while read -r name url; do
+            [ -z "$name" ] || [ -e "assets/learn/$name" ] || curl -fsSL -o "assets/learn/$name" "$url"
+          done < assets/learn/media.txt
+          git add assets/learn
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Add fetched illustrations"
+          git push

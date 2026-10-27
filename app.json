@@ -1,0 +1,105 @@
+{
+  "expo": {
+    "name": "Нұр",
+    "slug": "nur-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "nur",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0D1640",
+    "ios": {
+      "bundleIdentifier": "kz.nurapp.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "kz.nurapp.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1640",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.VIBRATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0D1640"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Намаз уақыттары мен Құбыла бағытын анықтау үшін орныңыз қажет. / Местоположение нужно для расчёта времени намаза и направления Киблы."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1D2A63",
+          "sounds": [
+            "./assets/sounds/chime.wav",
+            "./assets/sounds/soft.wav"
+          ]
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      "expo-font",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Prayer",
+              "label": "Нұр: намаз уақыты",
+              "description": "Келесі намаз және бүгінгі уақыттар",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "# WorkManager (used by the home screen widget) creates its Room database by reflection;\n# R8 renaming it crashes the app at startup.\n-keep class androidx.work.** { *; }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-keep class androidx.room.** { *; }"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

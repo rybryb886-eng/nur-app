@@ -1,0 +1,32 @@
+name: Fetch data
+
+# Data that only the open internet has (Quran word timings, sermon list, Muftyat cities and timetables).
+# Runs the scripts in scripts/fetch and commits what they write back to the branch.
+on:
+  push:
+    branches: [mvp, main]
+    paths: ['scripts/fetch/**']
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch
+        run: |
+          for f in scripts/fetch/fetch-*.py; do [ -e "$f" ] && python3 "$f"; done
+          git add assets lib
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Update fetched data"
+          git push

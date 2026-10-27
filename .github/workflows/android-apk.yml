@@ -1,0 +1,121 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main, mvp]
+    paths-ignore: ['assets/learn/media.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # A new icon is requested by committing its image URL to assets/brand/icon-source.url:
+      # the icons are generated from it, committed back, and the URL file is removed.
+      - name: Import app icon
+        if: hashFiles('assets/brand/icon-source.url') != ''
+        run: |
+          command -v convert >/dev/null || (sudo apt-get update -q && sudo apt-get install -yq imagemagick)
+          scripts/import-icon.sh "$(cat assets/brand/icon-source.url)"
+          git rm -q assets/brand/icon-source.url
+          git add assets/images
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Update app icons"
+          git push
+
+      - run: npm ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      # Release build signed with the debug key: fine for sideloading, not for Google Play.
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 --no-daemon
+        env:
+          GRADLE_OPTS: -Xmx4g
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk nur-${{ github.ref_name }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nur-apk
+          path: nur-${{ github.ref_name }}.apk
+
+  # Installs the APK on an emulator and launches it, so a crash at startup fails the run
+  # and its stack trace lands in the log.
+  smoke-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nur-apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash scripts/smoke-test.sh nur-${{ github.ref_name }}.apk
+
+      # Screenshots of the main screens, viewable at the smoke-<branch> release.
+      - name: Publish screenshots
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=smoke-${{ github.ref_name }}
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --target "${{ github.sha }}" \
+              --title "Smoke test screenshots (${{ github.ref_name }})" --notes "Screens of the latest build on an Android emulator."
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" screen.png shots/*.png --clobber || true
+
+      # Only an APK that starts on the emulator is published.
+      - name: Publish to the preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=preview-${{ github.ref_name }}
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --target "${{ github.sha }}" \
+              --title "Нұр: тестовая сборка (${{ github.ref_name }})" \
+              --notes "APK для установки на Android. Обновляется после каждого изменения ветки ${{ github.ref_name }}."
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" "nur-${{ github.ref_name }}.apk" --clobber
